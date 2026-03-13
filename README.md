@@ -11,8 +11,8 @@ audio files from the comfort of your terminal.
 
 Most audio file management tools are either heavyweight GUI applications or
 bare-bones CLI utilities with no interactivity. sndtool fills the gap: a fast,
-keyboard-driven TUI for everyday audio tasks, with CLI subcommands for scripting
-and automation.
+keyboard-driven TUI (terminal UI) for everyday audio tasks, with CLI subcommands
+for scripting and automation.
 
 Think `lazygit` but for audio files.
 

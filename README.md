@@ -19,11 +19,10 @@ Think `lazygit` but for audio files.
 - **Merge MP3 files** — combine a directory of MP3s into a single file with proper VBR headers for accurate seeking and duration
 - **Auto-tagging** — automatically set ID3 tags (artist, album, title, year) from structured filenames
 - **Tag browser** — TUI for browsing ID3 tags across a directory of audio files
+- **Tag editing** — edit ID3 tags inline from the TUI (single file or batch across a directory)
+- **File operations** — mark, copy, paste, and delete files from the TUI
 
 ### Planned
-
-- **Tag editing** — edit ID3 tags inline from the TUI
-- **Batch tag operations** — apply tags across multiple files at once
 - **Format conversion** — transcode between MP3, FLAC, OGG, WAV, and other formats
 - **Audio splitting** — split files by silence detection, chapter markers, or fixed intervals
 - **Normalization** — loudness normalization (ReplayGain / EBU R128)
@@ -34,12 +33,22 @@ Think `lazygit` but for audio files.
 ## Usage
 
 ```
+sndtool [directory]    Launch TUI (default: current directory)
 sndtool <command> [options]
 
 Commands:
-  merge   Merge MP3 files in a directory into a single file
-  tags    Browse audio file tags in a TUI
+  merge    Merge MP3 files in a directory into a single file
+  update   Update sndtool to the latest version
+  version  Display version information
 ```
+
+### TUI
+
+```
+sndtool [directory]
+```
+
+Opens a TUI to browse and edit ID3 tags for all audio files in the directory (defaults to current directory).
 
 ### Merge
 
@@ -49,13 +58,19 @@ sndtool merge <directory>
 
 Merges all MP3 files in `<directory>` (sorted alphabetically) into a single output file. The output filename is derived from the directory name. ID3 tags are set automatically if the filename matches the pattern `YYYY-MM-DD_author_title.mp3`.
 
-### Tags
-
-```
-sndtool tags [directory]
-```
-
-Opens a TUI to browse ID3 tags for all audio files in the directory (defaults to current directory).
+| Key | Action |
+|-----|--------|
+| `j`/`k`, `↑`/`↓` | Navigate |
+| `enter` | Open directory / view file tags |
+| `l`, `→` | Enter directory |
+| `h`, `backspace` | Parent directory |
+| `e` | Edit tags (file: single, directory: batch) |
+| `d` | Delete with confirmation |
+| `space` | Mark/unmark for batch operations |
+| `c` | Copy current or marked items |
+| `p` | Paste into current directory |
+| `←`/`→` | Horizontal scroll |
+| `q`, `esc` | Quit |
 
 ## Building
 

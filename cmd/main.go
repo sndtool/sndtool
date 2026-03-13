@@ -13,18 +13,27 @@ var version = "dev"
 
 var commands = map[string]func([]string) error{
 	"merge":   runMerge,
-	"tags":    runTags,
 	"update":  runUpdate,
 	"version": runVersion,
 }
 
 func main() {
 	if len(os.Args) < 2 {
-		printUsage()
-		os.Exit(1)
+		// No arguments: launch TUI
+		if err := runTUI(nil); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		return
 	}
 
 	subcmd := os.Args[1]
+
+	if subcmd == "help" || subcmd == "--help" || subcmd == "-h" {
+		printUsage()
+		return
+	}
+
 	fn, ok := commands[subcmd]
 	if !ok {
 		fmt.Fprintf(os.Stderr, "unknown command: %s\n", subcmd)
@@ -71,7 +80,6 @@ func printUsage() {
 	fmt.Fprintf(os.Stderr, "Usage: sndtool <command> [options]\n\n")
 	fmt.Fprintf(os.Stderr, "Commands:\n")
 	fmt.Fprintf(os.Stderr, "  merge    Merge MP3 files in a directory into a single file\n")
-	fmt.Fprintf(os.Stderr, "  tags     View and edit audio file tags (TUI)\n")
 	fmt.Fprintf(os.Stderr, "  update   Update sndtool to the latest version\n")
 	fmt.Fprintf(os.Stderr, "  version  Display version information\n")
 }

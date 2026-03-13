@@ -4,35 +4,48 @@
   <img alt="sndtool" src="sndtool-logo.svg">
 </picture>
 
-A terminal-based audio swiss army knife — browse, tag, merge, and manipulate audio files from the comfort of your terminal.
+A terminal-based audio swiss army knife — browse, tag, merge, and manipulate
+audio files from the comfort of your terminal.
 
-## Vision
+## 🔭 Vision
 
-Most audio file management tools are either heavyweight GUI applications or bare-bones CLI utilities with no interactivity. sndtool fills the gap: a fast, keyboard-driven TUI for everyday audio tasks, with CLI subcommands for scripting and automation.
+Most audio file management tools are either heavyweight GUI applications or
+bare-bones CLI utilities with no interactivity. sndtool fills the gap: a fast,
+keyboard-driven TUI for everyday audio tasks, with CLI subcommands for scripting
+and automation.
 
 Think `lazygit` but for audio files.
 
-## Features
+## ✨ Features
 
 ### Available now
 
-- **Merge MP3 files** — combine a directory of MP3s into a single file with proper VBR headers for accurate seeking and duration
-- **Auto-tagging** — automatically set ID3 tags (artist, album, title, year) from structured filenames
+- **Merge MP3 files** — combine a directory of MP3s into a single file with
+  proper VBR headers for accurate seeking and duration
+- **Auto-tagging** — automatically set ID3 tags (artist, album, title, year)
+  from structured filenames
 - **Tag browser** — TUI for browsing ID3 tags across a directory of audio files
-- **Tag editing** — edit ID3 tags inline from the TUI (single file or batch across a directory)
-- **File operations** — mark, copy, cut/move, paste, rename, and delete files from the TUI
+- **Tag editing** — edit ID3 tags inline from the TUI (single file or batch
+  across a directory)
+- **File operations** — mark, copy, cut/move, paste, rename, and delete files
+  from the TUI
 
 ### Planned
-- **Format conversion** — transcode between MP3, FLAC, OGG, WAV, and other formats
-- **Audio splitting** — split files by silence detection, chapter markers, or fixed intervals
+
+- **Format conversion** — transcode between MP3, FLAC, OGG, WAV, and other
+  formats
+- **Audio splitting** — split files by silence detection, chapter markers, or
+  fixed intervals
 - **Normalization** — loudness normalization (ReplayGain / EBU R128)
 - **Waveform preview** — visualize audio waveforms in the terminal
 - **File renaming** — rename files based on tag metadata (and vice versa)
-- **Metadata cleanup** — strip or repair broken tags, embedded artwork management
+- **Metadata cleanup** — strip or repair broken tags, embedded artwork
+  management
 
-## Installation
+## 📦 Installation
 
-1. Download the latest release for your platform from [GitHub Releases](https://github.com/sndtool/sndtool/releases)
+1. Download the latest release for your platform from
+   [GitHub Releases](https://github.com/sndtool/sndtool/releases)
 2. Place the binary in a directory on your `PATH`
 3. Run `sndtool` from a terminal
 
@@ -52,7 +65,7 @@ Place the binary in `/usr/local/bin` or `~/.local/bin`.
    - Click **OK** to save
 4. Open a new Command Prompt or PowerShell window and run `sndtool`
 
-## Usage
+## 🚀 Usage
 
 ```
 sndtool [directory]    Launch TUI (default: current directory)
@@ -70,7 +83,25 @@ Commands:
 sndtool [directory]
 ```
 
-Opens a TUI to browse and edit ID3 tags for all audio files in the directory (defaults to current directory).
+Opens a TUI to browse and edit ID3 tags for all audio files in the directory
+(defaults to current directory).
+
+| Key              | Action                                     |
+| ---------------- | ------------------------------------------ |
+| `j`/`k`, `↑`/`↓` | Navigate                                   |
+| `enter`          | Open directory / view file tags            |
+| `l`, `→`         | Enter directory                            |
+| `h`, `backspace` | Parent directory                           |
+| `e`              | Edit tags (file: single, directory: batch) |
+| `d`              | Delete with confirmation                   |
+| `space`          | Mark/unmark for batch operations           |
+| `c`              | Copy current or marked items               |
+| `x`              | Cut (mark for move)                        |
+| `p`              | Paste (copy or move)                       |
+| `m`              | Merge MP3s in directory                    |
+| `r`              | Rename                                     |
+| `←`/`→`          | Horizontal scroll                          |
+| `q`, `esc`       | Quit                                       |
 
 ### Merge
 
@@ -78,32 +109,18 @@ Opens a TUI to browse and edit ID3 tags for all audio files in the directory (de
 sndtool merge <directory>
 ```
 
-Merges all MP3 files in `<directory>` (sorted alphabetically) into a single output file. The output filename is derived from the directory name. ID3 tags are set automatically if the filename matches the pattern `YYYY-MM-DD_author_title.mp3`.
+Merges all MP3 files in `<directory>` (sorted alphabetically) into a single
+output file. The output filename is derived from the directory name. ID3 tags
+are set automatically if the filename matches the pattern
+`YYYY-MM-DD_author_title.mp3`.
 
-| Key | Action |
-|-----|--------|
-| `j`/`k`, `↑`/`↓` | Navigate |
-| `enter` | Open directory / view file tags |
-| `l`, `→` | Enter directory |
-| `h`, `backspace` | Parent directory |
-| `e` | Edit tags (file: single, directory: batch) |
-| `d` | Delete with confirmation |
-| `space` | Mark/unmark for batch operations |
-| `c` | Copy current or marked items |
-| `x` | Cut (mark for move) |
-| `p` | Paste (copy or move) |
-| `m` | Merge MP3s in directory |
-| `r` | Rename |
-| `←`/`→` | Horizontal scroll |
-| `q`, `esc` | Quit |
-
-## Building
+## 🔨 Building
 
 ```
 go build -o sndtool .
 ```
 
-## Tech
+## 🛠️ Tech
 
 - [Go](https://go.dev)
 - [Bubble Tea](https://github.com/charmbracelet/bubbletea) — TUI framework

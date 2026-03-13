@@ -6,6 +6,8 @@ version: 2
 before:
   hooks:
     - go mod tidy
+    # Extract changelog section for this version and save to file
+    - bash -c './scripts/extract-changelog.sh $(git describe --tags --abbrev=0) > .release-notes.md'
 
 builds:
   - main: ./cmd

@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	sndtool "github.com/cbrake/sndtool"
+	sndtool "github.com/sndtool/sndtool"
 )
 
 var version = "dev"

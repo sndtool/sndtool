@@ -1,4 +1,4 @@
-module github.com/cbrake/sndtool
+module github.com/sndtool/sndtool
 
 go 1.26.1
 

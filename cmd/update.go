@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	githubAPIURL = "https://api.github.com/repos/cbrake/sndtool/releases/latest"
-	githubRelURL = "https://github.com/cbrake/sndtool/releases/latest/download"
+	githubAPIURL = "https://api.github.com/repos/sndtool/sndtool/releases/latest"
+	githubRelURL = "https://github.com/sndtool/sndtool/releases/latest/download"
 )
 
 type githubRelease struct {

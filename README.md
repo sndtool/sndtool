@@ -30,6 +30,28 @@ Think `lazygit` but for audio files.
 - **File renaming** — rename files based on tag metadata (and vice versa)
 - **Metadata cleanup** — strip or repair broken tags, embedded artwork management
 
+## Installation
+
+1. Download the latest release for your platform from [GitHub Releases](https://github.com/sndtool/sndtool/releases)
+2. Place the binary in a directory on your `PATH`
+3. Run `sndtool` from a terminal
+
+### Linux / macOS
+
+Place the binary in `/usr/local/bin` or `~/.local/bin`.
+
+### Windows
+
+1. Create a directory such as `C:\Tools`
+2. Move `sndtool.exe` into that directory
+3. Add the directory to your `PATH`:
+   - Open **Settings → System → About → Advanced system settings**
+   - Click **Environment Variables**
+   - Under **User variables**, select `Path` and click **Edit**
+   - Click **New** and add `C:\Tools`
+   - Click **OK** to save
+4. Open a new Command Prompt or PowerShell window and run `sndtool`
+
 ## Usage
 
 ```

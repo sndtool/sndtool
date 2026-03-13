@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">
+  <defs>
+    <linearGradient id="wg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FF6B35"/>
+      <stop offset="100%" stop-color="#E84525"/>
+    </linearGradient>
+    <clipPath id="rc">
+      <rect x="20" y="20" width="200" height="200" rx="32" ry="32"/>
+    </clipPath>
+  </defs>
+
+  <rect x="20" y="20" width="200" height="200" rx="32" ry="32" fill="#1A1A2E"/>
+
+  <g clip-path="url(#rc)">
+    <!-- Subtle grid dots -->
+    <g opacity="0.08" fill="#FFF">
+      <circle cx="50" cy="50" r="1.2"/><circle cx="70" cy="50" r="1.2"/>
+      <circle cx="90" cy="50" r="1.2"/><circle cx="110" cy="50" r="1.2"/>
+      <circle cx="130" cy="50" r="1.2"/><circle cx="150" cy="50" r="1.2"/>
+      <circle cx="170" cy="50" r="1.2"/><circle cx="190" cy="50" r="1.2"/>
+      <circle cx="50" cy="190" r="1.2"/><circle cx="70" cy="190" r="1.2"/>
+      <circle cx="90" cy="190" r="1.2"/><circle cx="110" cy="190" r="1.2"/>
+      <circle cx="130" cy="190" r="1.2"/><circle cx="150" cy="190" r="1.2"/>
+      <circle cx="170" cy="190" r="1.2"/><circle cx="190" cy="190" r="1.2"/>
+    </g>
+
+    <!-- Waveform bars -->
+    <rect x="52"  y="102" width="8" height="36" rx="4" fill="url(#wg)" opacity="0.6"/>
+    <rect x="66"  y="88"  width="8" height="64" rx="4" fill="url(#wg)" opacity="0.7"/>
+    <rect x="80"  y="76"  width="8" height="88" rx="4" fill="url(#wg)" opacity="0.8"/>
+    <rect x="94"  y="62"  width="8" height="116" rx="4" fill="url(#wg)" opacity="0.9"/>
+    <rect x="108" y="52"  width="8" height="136" rx="4" fill="url(#wg)"/>
+    <rect x="122" y="66"  width="8" height="108" rx="4" fill="url(#wg)" opacity="0.9"/>
+    <rect x="136" y="80"  width="8" height="80" rx="4" fill="url(#wg)" opacity="0.8"/>
+    <rect x="150" y="92"  width="8" height="56" rx="4" fill="url(#wg)" opacity="0.7"/>
+    <rect x="164" y="84"  width="8" height="72" rx="4" fill="url(#wg)" opacity="0.8"/>
+    <rect x="178" y="98"  width="8" height="44" rx="4" fill="url(#wg)" opacity="0.6"/>
+
+    <!-- Base accent line -->
+    <line x1="46" y1="198" x2="196" y2="198" stroke="#FF6B35" stroke-width="2" opacity="0.4"/>
+  </g>
+</svg>

@@ -1,4 +1,8 @@
-# sndtool
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="sndtool-logo-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="sndtool-logo.svg">
+  <img alt="sndtool" src="sndtool-logo.svg">
+</picture>
 
 A terminal-based audio swiss army knife — browse, tag, merge, and manipulate audio files from the comfort of your terminal.
 

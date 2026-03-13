@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 280" width="800" height="280">
+  <defs>
+    <!-- Warm amber gradient for the waveform mark -->
+    <linearGradient id="waveGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FF6B35"/>
+      <stop offset="100%" stop-color="#E84525"/>
+    </linearGradient>
+    <!-- Subtle text gradient -->
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1A1A2E"/>
+      <stop offset="100%" stop-color="#2D2D44"/>
+    </linearGradient>
+    <!-- Knife blade gradient -->
+    <linearGradient id="bladeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF6B35"/>
+      <stop offset="50%" stop-color="#FF8C42"/>
+      <stop offset="100%" stop-color="#FF6B35"/>
+    </linearGradient>
+    <clipPath id="roundClip">
+      <rect x="20" y="40" width="200" height="200" rx="32" ry="32"/>
+    </clipPath>
+  </defs>
+
+  <!-- LOGOMARK: Rounded square container -->
+  <rect x="20" y="40" width="200" height="200" rx="32" ry="32" fill="#1A1A2E"/>
+
+  <!-- Waveform bars inside the mark — arranged as audio bars with a swiss-army-knife blade emerging -->
+  <!-- Left waveform group -->
+  <g clip-path="url(#roundClip)">
+    <!-- Subtle grid dots for terminal feel -->
+    <g opacity="0.08" fill="#FFFFFF">
+      <circle cx="50" cy="70" r="1.2"/>
+      <circle cx="70" cy="70" r="1.2"/>
+      <circle cx="90" cy="70" r="1.2"/>
+      <circle cx="110" cy="70" r="1.2"/>
+      <circle cx="130" cy="70" r="1.2"/>
+      <circle cx="150" cy="70" r="1.2"/>
+      <circle cx="170" cy="70" r="1.2"/>
+      <circle cx="190" cy="70" r="1.2"/>
+      <circle cx="50" cy="90" r="1.2"/>
+      <circle cx="70" cy="90" r="1.2"/>
+      <circle cx="90" cy="90" r="1.2"/>
+      <circle cx="110" cy="90" r="1.2"/>
+      <circle cx="130" cy="90" r="1.2"/>
+      <circle cx="150" cy="90" r="1.2"/>
+      <circle cx="170" cy="90" r="1.2"/>
+      <circle cx="190" cy="90" r="1.2"/>
+      <circle cx="50" cy="190" r="1.2"/>
+      <circle cx="70" cy="190" r="1.2"/>
+      <circle cx="90" cy="190" r="1.2"/>
+      <circle cx="110" cy="190" r="1.2"/>
+      <circle cx="130" cy="190" r="1.2"/>
+      <circle cx="150" cy="190" r="1.2"/>
+      <circle cx="170" cy="190" r="1.2"/>
+      <circle cx="190" cy="190" r="1.2"/>
+      <circle cx="50" cy="210" r="1.2"/>
+      <circle cx="70" cy="210" r="1.2"/>
+      <circle cx="90" cy="210" r="1.2"/>
+      <circle cx="110" cy="210" r="1.2"/>
+      <circle cx="130" cy="210" r="1.2"/>
+      <circle cx="150" cy="210" r="1.2"/>
+      <circle cx="170" cy="210" r="1.2"/>
+      <circle cx="190" cy="210" r="1.2"/>
+    </g>
+
+    <!-- Audio waveform bars — symmetric, centered vertically at y=140 -->
+    <!-- These bars evoke both an audio waveform and multi-tool blades fanning out -->
+    <rect x="52"  y="122" width="8" height="36" rx="4" fill="url(#waveGrad)" opacity="0.6"/>
+    <rect x="66"  y="108" width="8" height="64" rx="4" fill="url(#waveGrad)" opacity="0.7"/>
+    <rect x="80"  y="96"  width="8" height="88" rx="4" fill="url(#waveGrad)" opacity="0.8"/>
+    <rect x="94"  y="82"  width="8" height="116" rx="4" fill="url(#waveGrad)" opacity="0.9"/>
+    <rect x="108" y="72"  width="8" height="136" rx="4" fill="url(#waveGrad)"/>
+    <rect x="122" y="86"  width="8" height="108" rx="4" fill="url(#waveGrad)" opacity="0.9"/>
+    <rect x="136" y="100" width="8" height="80" rx="4" fill="url(#waveGrad)" opacity="0.8"/>
+    <rect x="150" y="112" width="8" height="56" rx="4" fill="url(#waveGrad)" opacity="0.7"/>
+    <rect x="164" y="104" width="8" height="72" rx="4" fill="url(#waveGrad)" opacity="0.8"/>
+    <rect x="178" y="118" width="8" height="44" rx="4" fill="url(#waveGrad)" opacity="0.6"/>
+
+    <!-- Blade accent — a sharp line cutting diagonally, evoking a knife edge -->
+    <line x1="46" y1="218" x2="196" y2="218" stroke="#FF6B35" stroke-width="2" opacity="0.4"/>
+  </g>
+
+  <!-- WORDMARK -->
+  <g transform="translate(258, 100)">
+    <!-- "snd" in bold weight -->
+    <text font-family="'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace"
+          font-size="96" font-weight="700" fill="url(#textGrad)" letter-spacing="-2">
+      snd
+    </text>
+    <!-- "tool" in lighter weight with accent color -->
+    <text x="232" font-family="'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace"
+          font-size="96" font-weight="300" fill="#FF6B35" letter-spacing="-2">
+      tool
+    </text>
+  </g>
+
+  <!-- Tagline -->
+  <text x="262" y="216" 
+        font-family="'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace"
+        font-size="24" font-weight="400" fill="#888899" letter-spacing="5">
+    YOUR AUDIO SWISS ARMY KNIFE
+  </text>
+
+  <!-- Terminal cursor blink accent -->
+  <rect x="262" y="232" width="30" height="3" rx="1.5" fill="#FF6B35" opacity="0.6">
+    <animate attributeName="opacity" values="0.6;0.2;0.6" dur="1.5s" repeatCount="indefinite"/>
+  </rect>
+</svg>

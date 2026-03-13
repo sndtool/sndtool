@@ -1,4 +1,4 @@
-module github.com/cbrake/soundrig
+module github.com/cbrake/sndtool
 
 go 1.26.1
 

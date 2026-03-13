@@ -1,10 +1,10 @@
-# soundrig
+# sndtool
 
 A terminal-based audio swiss army knife — browse, tag, merge, and manipulate audio files from the comfort of your terminal.
 
 ## Vision
 
-Most audio file management tools are either heavyweight GUI applications or bare-bones CLI utilities with no interactivity. soundrig fills the gap: a fast, keyboard-driven TUI for everyday audio tasks, with CLI subcommands for scripting and automation.
+Most audio file management tools are either heavyweight GUI applications or bare-bones CLI utilities with no interactivity. sndtool fills the gap: a fast, keyboard-driven TUI for everyday audio tasks, with CLI subcommands for scripting and automation.
 
 Think `lazygit` but for audio files.
 
@@ -30,7 +30,7 @@ Think `lazygit` but for audio files.
 ## Usage
 
 ```
-soundrig <command> [options]
+sndtool <command> [options]
 
 Commands:
   merge   Merge MP3 files in a directory into a single file
@@ -40,7 +40,7 @@ Commands:
 ### Merge
 
 ```
-soundrig merge <directory>
+sndtool merge <directory>
 ```
 
 Merges all MP3 files in `<directory>` (sorted alphabetically) into a single output file. The output filename is derived from the directory name. ID3 tags are set automatically if the filename matches the pattern `YYYY-MM-DD_author_title.mp3`.
@@ -48,7 +48,7 @@ Merges all MP3 files in `<directory>` (sorted alphabetically) into a single outp
 ### Tags
 
 ```
-soundrig tags [directory]
+sndtool tags [directory]
 ```
 
 Opens a TUI to browse ID3 tags for all audio files in the directory (defaults to current directory).
@@ -56,7 +56,7 @@ Opens a TUI to browse ID3 tags for all audio files in the directory (defaults to
 ## Building
 
 ```
-go build -o soundrig .
+go build -o sndtool .
 ```
 
 ## Tech

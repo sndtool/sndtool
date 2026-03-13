@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"encoding/json"
@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	githubAPIURL = "https://api.github.com/repos/cbrake/soundrig/releases/latest"
-	githubRelURL = "https://github.com/cbrake/soundrig/releases/latest/download"
+	githubAPIURL = "https://api.github.com/repos/cbrake/sndtool/releases/latest"
+	githubRelURL = "https://github.com/cbrake/sndtool/releases/latest/download"
 )
 
 type githubRelease struct {
@@ -28,11 +28,11 @@ func runUpdate(args []string) error {
 		return fmt.Errorf("failed to check for updates: %w", err)
 	}
 
-	current := strings.TrimPrefix(Version, "v")
+	current := strings.TrimPrefix(version, "v")
 	latest := strings.TrimPrefix(latestVersion, "v")
 
 	if current == latest {
-		fmt.Printf("Already running the latest version (%s)\n", Version)
+		fmt.Printf("Already running the latest version (%s)\n", version)
 		return nil
 	}
 
@@ -40,7 +40,7 @@ func runUpdate(args []string) error {
 		fmt.Printf("Running development version. Latest release is %s\n", latestVersion)
 		fmt.Println("Proceeding with update...")
 	} else {
-		fmt.Printf("Updating from %s to %s\n", Version, latestVersion)
+		fmt.Printf("Updating from %s to %s\n", version, latestVersion)
 	}
 
 	if err := downloadAndInstall(latestVersion); err != nil {
@@ -95,7 +95,7 @@ func downloadAndInstall(version string) error {
 		return fmt.Errorf("failed to resolve symlinks: %w", err)
 	}
 
-	tmpFile, err := os.CreateTemp(filepath.Dir(execPath), "soundrig-update-*")
+	tmpFile, err := os.CreateTemp(filepath.Dir(execPath), "sndtool-update-*")
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
@@ -157,5 +157,5 @@ func getBinaryName(version string) string {
 		}
 	}
 
-	return fmt.Sprintf("soundrig-%s-%s-%s%s", version, osName, archName, armVersion)
+	return fmt.Sprintf("sndtool-%s-%s-%s%s", version, osName, archName, armVersion)
 }

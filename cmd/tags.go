@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"flag"
@@ -64,7 +64,7 @@ func (m tagsModel) View() string {
 	}
 
 	var b strings.Builder
-	b.WriteString(headerStyle.Render("soundrig tags") + "\n")
+	b.WriteString(headerStyle.Render("sndtool tags") + "\n")
 	b.WriteString(dimStyle.Render("j/k: navigate  q: quit") + "\n\n")
 
 	for i, e := range m.entries {
@@ -137,7 +137,7 @@ func loadTags(dir string) ([]tagEntry, error) {
 func runTags(args []string) error {
 	fs := flag.NewFlagSet("tags", flag.ExitOnError)
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: soundrig tags <directory>\n\n")
+		fmt.Fprintf(os.Stderr, "Usage: sndtool tags <directory>\n\n")
 		fmt.Fprintf(os.Stderr, "Browse and edit audio file tags in a TUI.\n")
 	}
 	fs.Parse(args)

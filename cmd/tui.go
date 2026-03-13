@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -536,7 +537,17 @@ func (m tagsModel) saveTags() error {
 	for _, p := range m.editPaths {
 		tag, err := id3v2.Open(p, id3v2.Options{Parse: true})
 		if err != nil {
-			return fmt.Errorf("%s: %w", filepath.Base(p), err)
+			if errors.Is(err, id3v2.ErrBodyOverflow) {
+				// Corrupt tag — reopen without parsing to get originalSize,
+				// then delete all frames so Save rewrites cleanly.
+				tag, err = id3v2.Open(p, id3v2.Options{Parse: false})
+				if err != nil {
+					return fmt.Errorf("%s: %w", filepath.Base(p), err)
+				}
+				tag.DeleteAllFrames()
+			} else {
+				return fmt.Errorf("%s: %w", filepath.Base(p), err)
+			}
 		}
 		if v, ok := fieldMap["Artist"]; ok {
 			tag.SetArtist(v)

@@ -46,7 +46,7 @@ After any code changes, update these files to stay in sync:
 
 - `README.md` — user-facing features, keybindings, usage
 - `CLAUDE.md` — keybindings table, conventions, project structure
-- `CHANGELOG.md` — add entry under the current unreleased version
+- `CHANGELOG.md` — add entry under the `## Unreleased` section (create it if missing); do not add to released version sections
 
 ## Conventions
 

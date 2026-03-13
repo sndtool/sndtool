@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Fix: handle corrupt ID3 tags ("frame went over tag area") by stripping and
+  rewriting the tag on save instead of failing
+
 ## v0.0.4
 
 - TUI: PgDn/PgUp and Ctrl-f/Ctrl-b for page scrolling in browse view

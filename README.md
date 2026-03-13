@@ -78,6 +78,8 @@ executable in place.
 
 ## 🚀 Usage
 
+Open a terminal and run:
+
 ```
 sndtool [directory]    Launch TUI (default: current directory)
 sndtool <command> [options]
@@ -94,8 +96,8 @@ Commands:
 sndtool [directory]
 ```
 
-Opens a TUI to browse and edit ID3 tags for all audio files in the directory
-(defaults to current directory).
+Opens a TUI (terminal UI) to browse and edit ID3 tags for all audio files in the
+directory (defaults to current directory) as well a file management operations.
 
 | Key              | Action                                     |
 | ---------------- | ------------------------------------------ |
@@ -124,8 +126,9 @@ sndtool merge <directory>
 
 Merges all MP3 files in `<directory>` (sorted alphabetically) into a single
 output file. The output filename is derived from the directory name. ID3 tags
-are set automatically if the filename matches the pattern
-`YYYY-MM-DD_author_title.mp3`.
+are set automatically if the directory name matches the pattern
+`YYYY-MM-DD_author_title`. Renaming the directory before the merge operation is
+recommended.
 
 ## 🔨 Building
 

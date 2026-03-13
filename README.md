@@ -20,7 +20,7 @@ Think `lazygit` but for audio files.
 - **Auto-tagging** — automatically set ID3 tags (artist, album, title, year) from structured filenames
 - **Tag browser** — TUI for browsing ID3 tags across a directory of audio files
 - **Tag editing** — edit ID3 tags inline from the TUI (single file or batch across a directory)
-- **File operations** — mark, copy, paste, and delete files from the TUI
+- **File operations** — mark, copy, cut/move, paste, rename, and delete files from the TUI
 
 ### Planned
 - **Format conversion** — transcode between MP3, FLAC, OGG, WAV, and other formats
@@ -68,7 +68,10 @@ Merges all MP3 files in `<directory>` (sorted alphabetically) into a single outp
 | `d` | Delete with confirmation |
 | `space` | Mark/unmark for batch operations |
 | `c` | Copy current or marked items |
-| `p` | Paste into current directory |
+| `x` | Cut (mark for move) |
+| `p` | Paste (copy or move) |
+| `m` | Merge MP3s in directory |
+| `r` | Rename |
 | `←`/`→` | Horizontal scroll |
 | `q`, `esc` | Quit |
 

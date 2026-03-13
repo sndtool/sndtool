@@ -53,6 +53,7 @@ type tagsModel struct {
 	mode          string
 	marked        map[int]bool
 	clipboard     []string
+	clipboardCut  bool
 	viewEntry     tagEntry
 	editFields    []editField
 	editCursor    int
@@ -216,32 +217,62 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		targets := m.getMarkedOrCurrent()
 		if len(targets) > 0 {
 			m.clipboard = nil
+			m.clipboardCut = false
 			for _, idx := range targets {
 				m.clipboard = append(m.clipboard, m.entries[idx].path)
 			}
 			m.statusMsg = fmt.Sprintf("Copied %d item(s)", len(targets))
 		}
 
+	case "x":
+		targets := m.getMarkedOrCurrent()
+		if len(targets) > 0 {
+			m.clipboard = nil
+			m.clipboardCut = true
+			for _, idx := range targets {
+				m.clipboard = append(m.clipboard, m.entries[idx].path)
+			}
+			m.marked = nil
+			m.statusMsg = fmt.Sprintf("Cut %d item(s)", len(targets))
+		}
+
 	case "p":
 		if len(m.clipboard) > 0 {
-			count, err := m.pasteFiles()
+			isCut := m.clipboardCut
+			count, dstPaths, err := m.pasteFiles()
 			if err != nil {
 				m.statusMsg = "Paste error: " + err.Error()
 			} else {
-				m.statusMsg = fmt.Sprintf("Pasted %d item(s)", count)
+				if isCut {
+					m.statusMsg = fmt.Sprintf("Moved %d item(s)", count)
+					m.clipboard = nil
+					m.clipboardCut = false
+				} else {
+					m.statusMsg = fmt.Sprintf("Pasted %d item(s)", count)
+				}
 				entries, err := loadTags(m.dir)
 				if err == nil {
 					m.entries = entries
 					m.marked = nil
+					// highlight first pasted item
+					if len(dstPaths) > 0 {
+						firstName := filepath.Base(dstPaths[0])
+						for i, e := range m.entries {
+							if e.name == firstName {
+								m.cursor = i
+								break
+							}
+						}
+					}
 					m = m.clampScroll()
 				}
 			}
 		}
 
-	case "b":
+	case "m":
 		if len(m.entries) > 0 && m.entries[m.cursor].isDir {
 			e := m.entries[m.cursor]
-			outputFile := filepath.Join(m.dir, strings.ToLower(filepath.Base(e.path))+".mp3")
+			outputFile := uniquePath(filepath.Join(m.dir, strings.ToLower(filepath.Base(e.path))+".mp3"))
 			// Suppress stdout during merge (MergeMp3Files prints progress)
 			oldStdout := os.Stdout
 			os.Stdout, _ = os.Open(os.DevNull)
@@ -256,6 +287,13 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				if loadErr == nil {
 					m.entries = entries
 					m.marked = nil
+					mergedName := filepath.Base(outputFile)
+					for i, e := range m.entries {
+						if e.name == mergedName {
+							m.cursor = i
+							break
+						}
+					}
 					m = m.clampScroll()
 				}
 			}
@@ -662,27 +700,50 @@ func (m tagsModel) getMarkedOrCurrent() []int {
 	return nil
 }
 
-func (m tagsModel) pasteFiles() (int, error) {
+func (m tagsModel) pasteFiles() (int, []string, error) {
 	count := 0
+	var dstPaths []string
 	for _, src := range m.clipboard {
 		info, err := os.Stat(src)
 		if err != nil {
-			return count, err
+			return count, dstPaths, err
 		}
 		name := filepath.Base(src)
 		dst := filepath.Join(m.dir, name)
 		dst = uniquePath(dst)
-		if info.IsDir() {
-			err = copyDir(src, dst)
+		if m.clipboardCut {
+			// Move: try rename first, fall back to copy+delete for cross-device
+			err = os.Rename(src, dst)
+			if err != nil {
+				// cross-device fallback
+				if info.IsDir() {
+					err = copyDir(src, dst)
+				} else {
+					err = copyFile(src, dst)
+				}
+				if err != nil {
+					return count, dstPaths, err
+				}
+				if info.IsDir() {
+					err = os.RemoveAll(src)
+				} else {
+					err = os.Remove(src)
+				}
+			}
 		} else {
-			err = copyFile(src, dst)
+			if info.IsDir() {
+				err = copyDir(src, dst)
+			} else {
+				err = copyFile(src, dst)
+			}
 		}
 		if err != nil {
-			return count, err
+			return count, dstPaths, err
 		}
+		dstPaths = append(dstPaths, dst)
 		count++
 	}
-	return count, nil
+	return count, dstPaths, nil
 }
 
 func uniquePath(path string) string {
@@ -780,7 +841,7 @@ func (m tagsModel) View() string {
 func (m tagsModel) viewBrowse() string {
 	var b strings.Builder
 	b.WriteString(headerStyle.Render("sndtool tags — "+m.dir) + "\n")
-	b.WriteString(dimStyle.Render("j/k: nav  enter: open  e: edit  r: rename  b: merge  d: del  space: mark  c/p: copy/paste  q: quit") + "\n\n")
+	b.WriteString(dimStyle.Render("j/k: nav  enter: open  e: edit  r: rename  m: merge  d: del  space: mark  c: copy  x: cut  p: paste  q: quit") + "\n\n")
 
 	heading := fmt.Sprintf("   %-40s  %-20s  %-30s  %s", "File", "Artist", "Title", "Year")
 	b.WriteString(headerStyle.Render(hscrollLine(heading, m.hscroll, m.width)) + "\n")

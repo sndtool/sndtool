@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.0.3 (unreleased)
+
+### Enhancements
+
+- TUI: Add viewport scrolling so file lists longer than the terminal are navigable
+- TUI: Show directories in the file browser and support drilling into them (Enter/l) and navigating to parent (Backspace/h)
+- TUI: Display current directory path in header and scroll position indicator
+- TUI: Use alt-screen for proper full-screen display
+
 ## v0.0.2 (2026-03-13)
 
 ### Bug Fixes

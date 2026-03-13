@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Docs: add Contributing section to README with links to Issues, PRs, and Discussions
+
 ## v0.0.5 (2026-03-13)
 
 - Fix: handle corrupt ID3 tags ("frame went over tag area") by stripping and

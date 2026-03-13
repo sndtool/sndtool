@@ -129,3 +129,11 @@ go build -o sndtool .
 - [Lip Gloss](https://github.com/charmbracelet/lipgloss) — terminal styling
 - [id3v2](https://github.com/bogem/id3v2) — ID3 tag reading/writing
 - [mp3lib](https://github.com/dmulholl/mp3lib) — MP3 frame-level processing
+
+## 💬 Contributing
+
+Contributions and ideas are welcome! Open an
+[Issue](https://github.com/sndtool/sndtool/issues) or
+[Pull Request](https://github.com/sndtool/sndtool/pulls). If you use sndtool,
+let us know in the
+[Discussions](https://github.com/sndtool/sndtool/discussions)!

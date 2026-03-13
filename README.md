@@ -65,6 +65,17 @@ Place the binary in `/usr/local/bin` or `~/.local/bin`.
    - Click **OK** to save
 4. Open a new Command Prompt or PowerShell window and run `sndtool`
 
+### Updating
+
+sndtool can update itself to the latest release:
+
+```
+sndtool update
+```
+
+This downloads the latest binary from GitHub Releases and replaces the current
+executable in place.
+
 ## 🚀 Usage
 
 ```

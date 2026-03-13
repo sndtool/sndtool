@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.0.4
+
+- TUI: PgDn/PgUp and Ctrl-f/Ctrl-b for page scrolling in browse view
+
 ## v0.0.3
 
 ### Breaking Changes

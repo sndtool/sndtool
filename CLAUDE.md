@@ -36,6 +36,8 @@ go build -o sndtool .        # build
 | `p` | Paste (copy or move) |
 | `m` | Merge MP3s in directory |
 | `r` | Rename |
+| `pgdn`/`ctrl-f` | Page down |
+| `pgup`/`ctrl-b` | Page up |
 | `q`/`esc` | Quit |
 
 ## Docs Policy

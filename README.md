@@ -100,6 +100,8 @@ Opens a TUI to browse and edit ID3 tags for all audio files in the directory
 | `p`              | Paste (copy or move)                       |
 | `m`              | Merge MP3s in directory                    |
 | `r`              | Rename                                     |
+| `PgDn`/`Ctrl-f`  | Page down                                  |
+| `PgUp`/`Ctrl-b`  | Page up                                    |
 | `←`/`→`          | Horizontal scroll                          |
 | `q`, `esc`       | Quit                                       |
 

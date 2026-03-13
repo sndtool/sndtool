@@ -299,6 +299,22 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+	case "pgdown", "ctrl+f":
+		vis := m.visibleRows()
+		m.cursor += vis
+		if m.cursor >= len(m.entries) {
+			m.cursor = len(m.entries) - 1
+		}
+		m = m.clampScroll()
+
+	case "pgup", "ctrl+b":
+		vis := m.visibleRows()
+		m.cursor -= vis
+		if m.cursor < 0 {
+			m.cursor = 0
+		}
+		m = m.clampScroll()
+
 	case "r":
 		if len(m.entries) > 0 {
 			e := m.entries[m.cursor]
@@ -841,7 +857,7 @@ func (m tagsModel) View() string {
 func (m tagsModel) viewBrowse() string {
 	var b strings.Builder
 	b.WriteString(headerStyle.Render("sndtool tags — "+m.dir) + "\n")
-	b.WriteString(dimStyle.Render("j/k: nav  enter: open  e: edit  r: rename  m: merge  d: del  space: mark  c: copy  x: cut  p: paste  q: quit") + "\n\n")
+	b.WriteString(dimStyle.Render("j/k: nav  pgdn/pgup: page  enter: open  e: edit  r: rename  m: merge  d: del  space: mark  c: copy  x: cut  p: paste  q: quit") + "\n\n")
 
 	heading := fmt.Sprintf("   %-40s  %-20s  %-30s  %s", "File", "Artist", "Title", "Year")
 	b.WriteString(headerStyle.Render(hscrollLine(heading, m.hscroll, m.width)) + "\n")

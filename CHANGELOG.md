@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.1.0 (2026-04-08)
+
 - TUI: audio playback via mpv — `P` plays current file with progress bar,
   artist/title display, and auto-advance to next track; `S` pauses/resumes;
   `Shift+←/→` seeks ±10s; `Shift+↑/↓` skips to prev/next song; `+`/`-`/`=`
@@ -9,8 +11,10 @@
   not found
 - TUI: dynamic column widths scale to terminal width
 - Docs: add screenshot to README; document mpv dependency
-- TUI: fix header/location line being pushed off screen by long directory listings
-- TUI: `f` opens fuzzy finder that recursively searches files/dirs by name or tags
+- TUI: fix header/location line being pushed off screen by long directory
+  listings
+- TUI: `f` opens fuzzy finder that recursively searches files/dirs by name or
+  tags
 - TUI: `b` navigates back to previous directory before a jump
 - TUI: `~` returns to the start directory
 - TUI: edit mode (`e`) now includes a Name field to rename files and directories

@@ -16,6 +16,7 @@ import (
 	"github.com/bogem/id3v2/v2"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/dmulholl/mp3lib"
 	sndtool "github.com/sndtool/sndtool"
 )
 
@@ -1160,11 +1161,18 @@ func (m tagsModel) entryMatchesSearch(e tagEntry) bool {
 		return false
 	}
 	q := m.searchQuery
-	return strings.Contains(strings.ToLower(e.name), q) ||
+	if strings.Contains(strings.ToLower(e.name), q) ||
 		strings.Contains(strings.ToLower(e.artist), q) ||
 		strings.Contains(strings.ToLower(e.album), q) ||
 		strings.Contains(strings.ToLower(e.title), q) ||
-		strings.Contains(strings.ToLower(e.year), q)
+		strings.Contains(strings.ToLower(e.year), q) {
+		return true
+	}
+	// In find mode, also match against the full path
+	if m.findActive {
+		return strings.Contains(strings.ToLower(e.path), q)
+	}
+	return false
 }
 
 // applyFilter rebuilds m.entries from m.allEntries based on the current search query.
@@ -1555,6 +1563,46 @@ func copyDir(src, dst string) error {
 
 // --- Playback ---
 
+// mp3Duration returns the duration of an MP3 file by counting frames.
+func mp3Duration(path string) string {
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+
+	var totalSamples int
+	var sampleRate int
+	for {
+		obj := mp3lib.NextObject(f)
+		if obj == nil {
+			break
+		}
+		frame, ok := obj.(*mp3lib.MP3Frame)
+		if !ok {
+			continue
+		}
+		if mp3lib.IsXingHeader(frame) || mp3lib.IsVbriHeader(frame) {
+			continue
+		}
+		if sampleRate == 0 {
+			sampleRate = frame.SamplingRate
+		}
+		totalSamples += frame.SampleCount
+	}
+	if sampleRate == 0 {
+		return ""
+	}
+	secs := totalSamples / sampleRate
+	h := secs / 3600
+	m := (secs % 3600) / 60
+	s := secs % 60
+	if h > 0 {
+		return fmt.Sprintf("%d:%02d:%02d", h, m, s)
+	}
+	return fmt.Sprintf("%d:%02d", m, s)
+}
+
 // isPlayable returns true if the file has an audio extension that mpv can play.
 func isPlayable(path string) bool {
 	ext := strings.ToLower(filepath.Ext(path))
@@ -1934,9 +1982,9 @@ func (m tagsModel) viewBrowse() string {
 	} else if m.findActive {
 		findQuery := strings.TrimSpace(string(m.findInput))
 		if findQuery != "" {
-			b.WriteString("\n" + dimStyle.Render(fmt.Sprintf("  find: %s  (%d results, esc: back)", findQuery, len(m.entries))))
+			b.WriteString("\n" + dimStyle.Render(fmt.Sprintf("  find: %s  (%d results, esc: back)", findQuery, len(m.allEntries))))
 		} else {
-			b.WriteString("\n" + dimStyle.Render(fmt.Sprintf("  %s  (%d results, esc: back)", m.findTitle, len(m.entries))))
+			b.WriteString("\n" + dimStyle.Render(fmt.Sprintf("  %s  (%d results, esc: back)", m.findTitle, len(m.allEntries))))
 		}
 	}
 
@@ -1958,6 +2006,9 @@ func (m tagsModel) viewDetail() string {
 	b.WriteString(fmt.Sprintf("  %s  %s\n", label.Render("Album: "), e.album))
 	b.WriteString(fmt.Sprintf("  %s  %s\n", label.Render("Title: "), e.title))
 	b.WriteString(fmt.Sprintf("  %s  %s\n", label.Render("Year:  "), e.year))
+	if dur := mp3Duration(e.path); dur != "" {
+		b.WriteString(fmt.Sprintf("  %s  %s\n", label.Render("Length:"), dur))
+	}
 
 	return b.String()
 }
@@ -1990,6 +2041,12 @@ func (m tagsModel) viewEdit() string {
 			b.WriteString(string(f.value))
 		}
 		b.WriteString("\n")
+	}
+
+	if m.mode == modeEdit {
+		if dur := mp3Duration(m.viewEntry.path); dur != "" {
+			b.WriteString(fmt.Sprintf("\n  %s  %s\n", dimStyle.Render("Length: "), dur))
+		}
 	}
 
 	return b.String()

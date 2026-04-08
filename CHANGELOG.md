@@ -11,6 +11,8 @@
 - TUI: skip non-playable files and directories when using Shift+↑/↓ and
   auto-advance; wrap around at start/end of list
 - TUI: fix Shift+↑/↓ not skipping back to the currently playing file
+- TUI: show audio file length (h:m:s) in detail and edit views
+- TUI: filter in find mode also matches against full file path
 
 ## v0.1.0 (2026-04-08)
 

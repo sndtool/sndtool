@@ -14,7 +14,7 @@ bare-bones CLI utilities with no interactivity. sndtool fills the gap: a
 **fast**, keyboard-driven TUI (terminal UI) for everyday audio tasks, with CLI
 subcommands for scripting and automation.
 
-Think `lazygit` but for audio files.
+Think [lazygit](https://github.com/jesseduffield/lazygit) but for audio files.
 
 ![sndtool screenshot](sndtool-screenshot.png)
 

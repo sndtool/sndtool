@@ -13,6 +13,7 @@
 - TUI: fix Shift+↑/↓ not skipping back to the currently playing file
 - TUI: show audio file length (h:m:s) in detail and edit views
 - TUI: filter in find mode also matches against full file path
+- Dev: add `st_format` to envsetup.sh for formatting Go code
 
 ## v0.1.0 (2026-04-08)
 

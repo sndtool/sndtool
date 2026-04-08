@@ -2,10 +2,14 @@
 
 ## Unreleased
 
+## v0.1.1 (2026-04-08)
+
 - TUI: `Q` quality check — recursively finds MP3 files missing artist, album, or
-  title tags; displays results in columnar browse view with full edit/play support
+  title tags; displays results in columnar browse view with full edit/play
+  support
 - TUI: find (`f`) now uses the same columnar browse view; all browse keybindings
-  (edit, play, mark, etc.) work in find results; search input at bottom like filter
+  (edit, play, mark, etc.) work in find results; search input at bottom like
+  filter
 - TUI: filter (`/`) works inside find results for two-level search
 - TUI: increase max find results from 200 to 2000
 - TUI: skip non-playable files and directories when using Shift+↑/↓ and

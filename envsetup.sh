@@ -5,5 +5,5 @@ st_build() {
 }
 
 st_format() {
-	gofmt -w .
+	gofmt -s -w .
 }

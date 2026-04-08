@@ -75,11 +75,11 @@ type tagsModel struct {
 	searchPos   int    // cursor position in search input
 
 	// Fuzzy finder state
-	findInput   []rune     // current find input buffer
-	findPos     int        // cursor position in find input
-	findResults []tagEntry // recursive search results
-	findCursor  int        // cursor in find results
-	findOffset  int        // scroll offset in find results
+	findInput  []rune // current find input buffer
+	findPos    int    // cursor position in find input
+	findTitle  string // header title for find view
+	findActive bool   // true when displaying find results in browse view
+	returnMode string // mode to return to after edit (modeBrowse or modeFind)
 
 	// Navigation history
 	startDir string   // directory where TUI was launched
@@ -245,6 +245,21 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m = m.applyFilter()
 			return m, nil
 		}
+		if m.findActive {
+			m.findActive = false
+			m.findTitle = ""
+			m.findInput = nil
+			// Restore directory entries
+			entries, err := loadTags(m.dir)
+			if err == nil {
+				m.allEntries = entries
+				m.entries = entries
+			}
+			m.cursor = 0
+			m.offset = 0
+			m.marked = nil
+			return m, nil
+		}
 		m.stopPlayback()
 		m.quitting = true
 		return m, tea.Quit
@@ -269,6 +284,30 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "enter":
 		if len(m.entries) > 0 {
 			e := m.entries[m.cursor]
+			if m.findActive {
+				// Navigate to the file's directory in browse mode
+				var targetDir string
+				if e.isDir {
+					targetDir = e.path
+				} else {
+					targetDir = filepath.Dir(e.path)
+				}
+				m.dirStack = append(m.dirStack, m.dir)
+				m.findActive = false
+				m.findTitle = ""
+				m.findInput = nil
+				model, cmd := m.enterDir(targetDir)
+				mm := model.(tagsModel)
+				targetName := filepath.Base(e.path)
+				for i, entry := range mm.entries {
+					if entry.name == targetName {
+						mm.cursor = i
+						mm = mm.clampScroll()
+						break
+					}
+				}
+				return mm, cmd
+			}
 			if e.isDir {
 				return m.enterDir(e.path)
 			}
@@ -337,15 +376,25 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "f":
 		m.mode = modeFind
-		m.findInput = nil
-		m.findPos = 0
-		m.findResults = nil
-		m.findCursor = 0
-		m.findOffset = 0
+		if !m.findActive {
+			m.findInput = nil
+			m.findPos = 0
+			m.findActive = true
+			m.findTitle = "Find (recursive)"
+			m.entries = nil
+			m.cursor = 0
+			m.offset = 0
+			m.marked = nil
+		} else {
+			m.findPos = len(m.findInput)
+		}
 
 	case "e":
 		if len(m.entries) > 0 {
 			e := m.entries[m.cursor]
+			if m.findActive {
+				m.returnMode = modeBrowse // findActive stays true
+			}
 			if e.isDir {
 				return m.startEditDir(e.path)
 			}
@@ -572,6 +621,17 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+	case "Q":
+		m.findActive = true
+		m.findTitle = "Quality Check — missing tags"
+		m.findInput = nil
+		m.findPos = 0
+		results := searchMissingTags(m.startDir)
+		m.entries = results
+		m.cursor = 0
+		m.offset = 0
+		m.marked = nil
+
 	}
 	return m, nil
 }
@@ -679,9 +739,15 @@ func commonValue(vals []string) string {
 func (m tagsModel) updateEdit(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	f := &m.editFields[m.editCursor]
 
+	returnTo := m.returnMode
+	if returnTo == "" {
+		returnTo = modeBrowse
+	}
+
 	switch msg.Type {
 	case tea.KeyEsc:
-		m.mode = modeBrowse
+		m.mode = returnTo
+		m.returnMode = ""
 		return m, nil
 
 	case tea.KeyEnter:
@@ -692,13 +758,31 @@ func (m tagsModel) updateEdit(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		} else {
 			m.statusMsg = fmt.Sprintf("Saved tags for %d file(s)", len(m.editPaths))
 		}
-		m.mode = modeBrowse
-		entries, loadErr := loadTags(m.dir)
-		if loadErr == nil {
-			m.allEntries = entries
-			m.entries = entries
-			m.marked = nil
-			m = m.clampScroll()
+		m.mode = returnTo
+		m.returnMode = ""
+		if m.findActive {
+			// Update the edited entry in the find results
+			for i, e := range m.entries {
+				if e.path == m.viewEntry.path {
+					tag, terr := id3v2.Open(e.path, id3v2.Options{Parse: true})
+					if terr == nil {
+						m.entries[i].artist = tag.Artist()
+						m.entries[i].album = tag.Album()
+						m.entries[i].title = tag.Title()
+						m.entries[i].year = tag.Year()
+						tag.Close()
+					}
+					break
+				}
+			}
+		} else {
+			entries, loadErr := loadTags(m.dir)
+			if loadErr == nil {
+				m.allEntries = entries
+				m.entries = entries
+				m.marked = nil
+				m = m.clampScroll()
+			}
 		}
 		return m, nil
 
@@ -1171,51 +1255,77 @@ func searchRecursive(root, query string) []tagEntry {
 	return results
 }
 
+// searchMissingTags walks the directory tree and returns MP3 files missing artist, album, or title.
+func searchMissingTags(root string) []tagEntry {
+	var results []tagEntry
+	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if len(results) >= maxFindResults {
+			return filepath.SkipAll
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(strings.ToLower(d.Name()), ".mp3") {
+			return nil
+		}
+		tag, terr := id3v2.Open(path, id3v2.Options{Parse: true})
+		if terr != nil {
+			// Can't read tags — counts as missing
+			results = append(results, tagEntry{path: path, name: d.Name()})
+			return nil
+		}
+		defer tag.Close()
+		artist := strings.TrimSpace(tag.Artist())
+		album := strings.TrimSpace(tag.Album())
+		title := strings.TrimSpace(tag.Title())
+		if artist == "" || album == "" || title == "" {
+			results = append(results, tagEntry{
+				path: path, name: d.Name(),
+				artist: tag.Artist(), album: tag.Album(),
+				title: tag.Title(), year: tag.Year(),
+			})
+		}
+		return nil
+	})
+	return results
+}
+
 func (m tagsModel) updateFind(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyEsc:
+		// Exit find mode entirely, restore directory
 		m.mode = modeBrowse
+		m.findActive = false
+		m.findTitle = ""
+		m.findInput = nil
+		entries, err := loadTags(m.dir)
+		if err == nil {
+			m.allEntries = entries
+			m.entries = entries
+		}
+		m.cursor = 0
+		m.offset = 0
+		m.marked = nil
 		return m, nil
 
 	case tea.KeyEnter:
-		if len(m.findResults) > 0 {
-			selected := m.findResults[m.findCursor]
-			var targetDir string
-			if selected.isDir {
-				targetDir = selected.path
-			} else {
-				targetDir = filepath.Dir(selected.path)
-			}
-			m.dirStack = append(m.dirStack, m.dir)
-			m.mode = modeBrowse
-			model, cmd := m.enterDir(targetDir)
-			mm := model.(tagsModel)
-			// Position cursor on the selected entry
-			targetName := filepath.Base(selected.path)
-			if selected.isDir {
-				targetName += "" // already just the name
-			}
-			for i, e := range mm.entries {
-				if e.name == targetName || (e.isDir && e.name == targetName) {
-					mm.cursor = i
-					mm = mm.clampScroll()
-					break
-				}
-			}
-			return mm, cmd
-		}
+		// Accept search results — switch to browse mode with results still displayed
+		m.mode = modeBrowse
 		return m, nil
 
 	case tea.KeyUp:
-		if m.findCursor > 0 {
-			m.findCursor--
-			m = m.clampFindScroll()
+		if m.cursor > 0 {
+			m.cursor--
+			m = m.clampScroll()
 		}
 
 	case tea.KeyDown:
-		if m.findCursor < len(m.findResults)-1 {
-			m.findCursor++
-			m = m.clampFindScroll()
+		if m.cursor < len(m.entries)-1 {
+			m.cursor++
+			m = m.clampScroll()
 		}
 
 	case tea.KeyLeft:
@@ -1270,109 +1380,11 @@ func (m tagsModel) updateFind(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m tagsModel) runFind() tagsModel {
 	query := strings.TrimSpace(string(m.findInput))
-	m.findResults = searchRecursive(m.startDir, query)
-	m.findCursor = 0
-	m.findOffset = 0
+	m.entries = searchRecursive(m.startDir, query)
+	m.cursor = 0
+	m.offset = 0
+	m.marked = nil
 	return m
-}
-
-func (m tagsModel) clampFindScroll() tagsModel {
-	vis := m.visibleRows() - 2 // account for find input + header
-	if vis < 1 {
-		vis = 1
-	}
-	if m.findOffset > m.findCursor {
-		m.findOffset = m.findCursor
-	}
-	if m.findCursor >= m.findOffset+vis {
-		m.findOffset = m.findCursor - vis + 1
-	}
-	return m
-}
-
-func (m tagsModel) viewFind() string {
-	var b strings.Builder
-	b.WriteString(headerStyle.Render("sndtool — Find (recursive)") + "\n")
-	b.WriteString(dimStyle.Render("↑/↓: navigate  enter: go to  esc: cancel") + "\n\n")
-
-	// Search input
-	b.WriteString(headerStyle.Render("find: "))
-	f := string(m.findInput)
-	if m.findPos >= len(m.findInput) {
-		b.WriteString(f + "█")
-	} else {
-		before := string(m.findInput[:m.findPos])
-		at := string(m.findInput[m.findPos : m.findPos+1])
-		after := string(m.findInput[m.findPos+1:])
-		b.WriteString(before + lipgloss.NewStyle().Reverse(true).Render(at) + after)
-	}
-	b.WriteString("\n\n")
-
-	if len(m.findResults) == 0 {
-		if len(m.findInput) > 0 {
-			b.WriteString(dimStyle.Render("  No results"))
-		}
-		return b.String()
-	}
-
-	vis := m.visibleRows() - 2
-	if vis < 1 {
-		vis = 1
-	}
-	end := m.findOffset + vis
-	if end > len(m.findResults) {
-		end = len(m.findResults)
-	}
-
-	query := strings.ToLower(strings.TrimSpace(string(m.findInput)))
-	for i := m.findOffset; i < end; i++ {
-		e := m.findResults[i]
-		cursor := "  "
-		style := lipgloss.NewStyle()
-		if i == m.findCursor {
-			cursor = "> "
-			style = selectedStyle
-		}
-
-		// Show relative path from startDir
-		relPath, err := filepath.Rel(m.startDir, e.path)
-		if err != nil {
-			relPath = e.path
-		}
-
-		var line string
-		if e.isDir {
-			if i != m.findCursor {
-				style = dirStyle
-			}
-			line = fmt.Sprintf("%s%-50s  <dir>", cursor, truncate(relPath+"/", 50))
-		} else {
-			info := ""
-			if e.artist != "" || e.title != "" {
-				info = e.artist
-				if e.title != "" {
-					if info != "" {
-						info += " — "
-					}
-					info += e.title
-				}
-			}
-			line = fmt.Sprintf("%s%-50s  %s", cursor, truncate(relPath, 50), truncate(info, 40))
-		}
-
-		scrolled := hscrollLine(line, 0, m.width)
-		if query != "" {
-			b.WriteString(highlightText(scrolled, query, style, matchStyle) + "\n")
-		} else {
-			b.WriteString(style.Render(scrolled) + "\n")
-		}
-	}
-
-	if len(m.findResults) > vis {
-		b.WriteString(dimStyle.Render(fmt.Sprintf("\n  [%d/%d]", m.findCursor+1, len(m.findResults))))
-	}
-
-	return b.String()
 }
 
 // highlightText replaces case-insensitive occurrences of query in text with
@@ -1741,7 +1753,7 @@ func (m tagsModel) View() string {
 	case modeSearch:
 		return m.viewBrowse()
 	case modeFind:
-		return m.viewFind()
+		return m.viewBrowse()
 	case modeMpvMissing:
 		return m.viewMpvMissing()
 	default:
@@ -1751,10 +1763,15 @@ func (m tagsModel) View() string {
 
 func (m tagsModel) viewBrowse() string {
 	var b strings.Builder
-	b.WriteString(headerStyle.Render("sndtool tags — "+m.dir) + "\n")
-	helpKeys := "j/k: nav  enter: open  e: edit  r: rename  d: del  /: filter  space: mark  c/x/p: copy/cut/paste\n" +
-		"f: find  b: back  ~: home  m: merge  P: play  S: pause  ⇧←→: seek  ⇧↑↓: prev/next  +/-: vol  q: quit"
-	b.WriteString(dimStyle.Render(helpKeys) + "\n\n")
+	if m.findActive {
+		b.WriteString(headerStyle.Render("sndtool — "+m.findTitle) + "\n")
+		b.WriteString(dimStyle.Render("j/k: nav  e: edit  enter: go to  esc: back  P: play") + "\n\n")
+	} else {
+		b.WriteString(headerStyle.Render("sndtool tags — "+m.dir) + "\n")
+		helpKeys := "j/k: nav  enter: open  e: edit  r: rename  d: del  /: filter  space: mark  c/x/p: copy/cut/paste\n" +
+			"f: find  Q: quality  b: back  ~: home  m: merge  P: play  S: pause  ⇧←→: seek  ⇧↑↓: prev/next  +/-: vol  q: quit"
+		b.WriteString(dimStyle.Render(helpKeys) + "\n\n")
+	}
 
 	// Calculate dynamic column widths based on terminal width.
 	// Fixed overhead: cursor(2) + mark(1) + 4 column gaps(2 each=8) + year(4) = 15
@@ -1814,9 +1831,17 @@ func (m tagsModel) viewBrowse() string {
 			mark = "*"
 		}
 
+		// In find mode, show relative path from startDir instead of just name
+		displayName := e.name
+		if m.findActive {
+			if rel, err := filepath.Rel(m.startDir, e.path); err == nil {
+				displayName = rel
+			}
+		}
+
 		var line string
 		if e.isDir {
-			name := e.name + "/"
+			name := displayName + "/"
 			if i != m.cursor && !isPlaying {
 				style = dirStyle
 			}
@@ -1825,7 +1850,7 @@ func (m tagsModel) viewBrowse() string {
 		} else {
 			line = fmt.Sprintf(rowFmt,
 				cursor, mark,
-				truncate(e.name, colFile),
+				truncate(displayName, colFile),
 				truncate(e.artist, colArtist),
 				truncate(e.album, colAlbum),
 				truncate(e.title, colTitle),
@@ -1834,8 +1859,11 @@ func (m tagsModel) viewBrowse() string {
 		}
 
 		scrolled := hscrollLine(line, m.hscroll, m.width)
+		findQuery := strings.ToLower(strings.TrimSpace(string(m.findInput)))
 		if m.searchQuery != "" && m.entryMatchesSearch(e) {
 			b.WriteString(highlightText(scrolled, m.searchQuery, style, matchStyle) + "\n")
+		} else if m.findActive && findQuery != "" {
+			b.WriteString(highlightText(scrolled, findQuery, style, matchStyle) + "\n")
 		} else {
 			b.WriteString(style.Render(scrolled) + "\n")
 		}
@@ -1865,6 +1893,27 @@ func (m tagsModel) viewBrowse() string {
 		}
 	} else if m.searchQuery != "" {
 		b.WriteString("\n" + dimStyle.Render(fmt.Sprintf("  filter: %s  (%d/%d, /: edit, esc: clear)", m.searchQuery, len(m.entries), len(m.allEntries))))
+	}
+
+	// Find input bar
+	if m.mode == modeFind {
+		f := string(m.findInput)
+		b.WriteString("\n" + headerStyle.Render("find: "))
+		if m.findPos >= len(m.findInput) {
+			b.WriteString(f + "█")
+		} else {
+			before := string(m.findInput[:m.findPos])
+			at := string(m.findInput[m.findPos : m.findPos+1])
+			after := string(m.findInput[m.findPos+1:])
+			b.WriteString(before + lipgloss.NewStyle().Reverse(true).Render(at) + after)
+		}
+	} else if m.findActive {
+		findQuery := strings.TrimSpace(string(m.findInput))
+		if findQuery != "" {
+			b.WriteString("\n" + dimStyle.Render(fmt.Sprintf("  find: %s  (%d results, esc: back)", findQuery, len(m.entries))))
+		} else {
+			b.WriteString("\n" + dimStyle.Render(fmt.Sprintf("  %s  (%d results, esc: back)", m.findTitle, len(m.entries))))
+		}
 	}
 
 	return b.String()

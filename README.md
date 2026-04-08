@@ -122,6 +122,7 @@ directory (defaults to current directory) as well a file management operations.
 | `f`              | Find (recursive search from start dir)     |
 | `b`              | Back to previous directory (before jump)   |
 | `~`              | Home (return to start directory)           |
+| `Q`              | Quality check — find files with missing tags |
 | `P`              | Play file with mpv (shows progress bar)    |
 | `S`              | Pause/resume playback                      |
 | `Shift+←`/`→`   | Seek backward/forward 10 seconds           |

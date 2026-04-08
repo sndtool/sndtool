@@ -40,6 +40,7 @@ go build -o sndtool .        # build
 | `f` | Fuzzy find (recursive search from start dir) |
 | `b` | Back to previous directory (before jump) |
 | `~` | Home (return to start directory) |
+| `Q` | Quality check — find files with missing tags |
 | `P` | Play file with mpv |
 | `S` | Pause/resume playback |
 | `Shift+←/→` | Seek backward/forward 10s |

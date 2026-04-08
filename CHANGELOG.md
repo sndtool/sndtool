@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- TUI: `Q` quality check — recursively finds MP3 files missing artist, album, or
+  title tags; displays results in columnar browse view with full edit/play support
+- TUI: find (`f`) now uses the same columnar browse view; all browse keybindings
+  (edit, play, mark, etc.) work in find results; search input at bottom like filter
+
 ## v0.1.0 (2026-04-08)
 
 - TUI: audio playback via mpv — `P` plays current file with progress bar,

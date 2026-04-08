@@ -105,7 +105,7 @@ directory (defaults to current directory) as well a file management operations.
 | `enter`          | Open directory / view file tags            |
 | `l`, `→`         | Enter directory                            |
 | `h`, `backspace` | Parent directory                           |
-| `e`              | Edit tags (file: single, directory: batch) |
+| `e`              | Edit name and tags (file: single, directory: batch) |
 | `d`              | Delete with confirmation                   |
 | `space`          | Mark/unmark for batch operations           |
 | `c`              | Copy current or marked items               |
@@ -113,10 +113,15 @@ directory (defaults to current directory) as well a file management operations.
 | `p`              | Paste (copy or move)                       |
 | `m`              | Merge MP3s in directory                    |
 | `r`              | Rename                                     |
+| `/`              | Filter (filters list live)                 |
+| `f`              | Find (recursive search from start dir)     |
+| `b`              | Back to previous directory (before jump)   |
+| `~`              | Home (return to start directory)           |
 | `PgDn`/`Ctrl-f`  | Page down                                  |
 | `PgUp`/`Ctrl-b`  | Page up                                    |
 | `←`/`→`          | Horizontal scroll                          |
-| `q`, `esc`       | Quit                                       |
+| `esc`            | Clear filter (if active), otherwise quit   |
+| `q`              | Quit                                       |
 
 ### Merge
 

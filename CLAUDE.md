@@ -28,7 +28,7 @@ go build -o sndtool .        # build
 | `enter` | Open directory / view tags |
 | `l`/`right` | Enter directory |
 | `h`/`backspace` | Parent directory |
-| `e` | Edit tags |
+| `e` | Edit name and tags |
 | `d` | Delete (with confirmation) |
 | `space` | Mark/unmark |
 | `c` | Copy |
@@ -36,9 +36,14 @@ go build -o sndtool .        # build
 | `p` | Paste (copy or move) |
 | `m` | Merge MP3s in directory |
 | `r` | Rename |
+| `/` | Filter (filters list live) |
+| `f` | Fuzzy find (recursive search from start dir) |
+| `b` | Back to previous directory (before jump) |
+| `~` | Home (return to start directory) |
 | `pgdn`/`ctrl-f` | Page down |
 | `pgup`/`ctrl-b` | Page up |
-| `q`/`esc` | Quit |
+| `esc` | Clear filter (if active), otherwise quit |
+| `q` | Quit |
 
 ## Docs Policy
 
@@ -50,7 +55,8 @@ After any code changes, update these files to stay in sync:
 
 ## Conventions
 
-- TUI modes: `modeBrowse`, `modeDetail`, `modeEdit`, `modeEditDir`, `modeConfirm`, `modeRename`
+- TUI modes: `modeBrowse`, `modeDetail`, `modeEdit`, `modeEditDir`, `modeConfirm`, `modeRename`, `modeFind`
+- Don't change an existing key binding without explicitly confirming with the user first
 - File operations use `getMarkedOrCurrent()` to work on marked items or cursor item
 - Clipboard is an in-memory `[]string` of file paths; `clipboardCut` flag distinguishes copy vs cut
 - Cut (`x`) marks files for move without deleting; paste (`p`) uses `os.Rename` (with cross-device fallback)

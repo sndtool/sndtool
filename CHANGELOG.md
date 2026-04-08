@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- TUI: `f` opens fuzzy finder that recursively searches files/dirs by name or tags
+- TUI: `b` navigates back to previous directory before a jump
+- TUI: `~` returns to the start directory
+- TUI: edit mode (`e`) now includes a Name field to rename files and directories
+- TUI: filter (`/`) now filters the list to matching entries instead of
+  highlighting and jumping between matches; removed `n`/`N` navigation
+- TUI: `esc` now clears active filter first; second `esc` quits
+- TUI: renamed `/` from "search" to "filter" in UI labels and docs
+
 ## v0.0.6 (2026-04-08)
 
 - TUI: add Album column to browse view

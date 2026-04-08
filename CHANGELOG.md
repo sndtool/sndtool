@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- TUI: fix header/location line being pushed off screen by long directory listings
 - TUI: `f` opens fuzzy finder that recursively searches files/dirs by name or tags
 - TUI: `b` navigates back to previous directory before a jump
 - TUI: `~` returns to the start directory

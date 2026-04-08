@@ -85,10 +85,23 @@ func (m tagsModel) Init() tea.Cmd {
 	return nil
 }
 
-// visibleRows returns how many list rows fit on screen (minus header lines).
+// visibleRows returns how many list rows fit on screen (minus header/footer lines).
 func (m tagsModel) visibleRows() int {
-	// 4 header lines (title, 2 help lines, blank) + 1 column heading + 1 bottom padding
-	const chrome = 6
+	// Header: title(1) + help keys(2) + blank(1) + column heading(1) = 5
+	chrome := 5
+
+	// Footer: account for elements that will be rendered below the list.
+	// Pagination indicator (shown when entries > visible rows, but we need
+	// to estimate conservatively to avoid chicken-and-egg).
+	chrome++ // pagination line (always reserve to avoid flicker)
+
+	if m.statusMsg != "" {
+		chrome++ // status message line
+	}
+	if m.mode == modeSearch || m.searchQuery != "" {
+		chrome++ // search/filter bar
+	}
+
 	rows := m.height - chrome
 	if rows < 1 {
 		rows = 1

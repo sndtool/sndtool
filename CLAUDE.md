@@ -40,6 +40,11 @@ go build -o sndtool .        # build
 | `f` | Fuzzy find (recursive search from start dir) |
 | `b` | Back to previous directory (before jump) |
 | `~` | Home (return to start directory) |
+| `P` | Play file with mpv |
+| `S` | Pause/resume playback |
+| `Shift+←/→` | Seek backward/forward 10s |
+| `Shift+↑/↓` | Previous/next song |
+| `+`/`-` | Volume up/down |
 | `pgdn`/`ctrl-f` | Page down |
 | `pgup`/`ctrl-b` | Page up |
 | `esc` | Clear filter (if active), otherwise quit |

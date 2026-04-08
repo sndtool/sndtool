@@ -1,13 +1,17 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/bogem/id3v2/v2"
 	tea "github.com/charmbracelet/bubbletea"
@@ -16,14 +20,15 @@ import (
 )
 
 const (
-	modeBrowse  = ""
-	modeDetail  = "detail"
-	modeEdit    = "edit"
-	modeEditDir = "editdir"
-	modeConfirm = "confirm"
-	modeRename  = "rename"
-	modeSearch  = "search"
-	modeFind    = "find"
+	modeBrowse     = ""
+	modeDetail     = "detail"
+	modeEdit       = "edit"
+	modeEditDir    = "editdir"
+	modeConfirm    = "confirm"
+	modeRename     = "rename"
+	modeSearch     = "search"
+	modeFind       = "find"
+	modeMpvMissing = "mpvmissing"
 )
 
 type tagEntry struct {
@@ -79,6 +84,31 @@ type tagsModel struct {
 	// Navigation history
 	startDir string   // directory where TUI was launched
 	dirStack []string // previous directories for 'b' key
+
+	// Playback state
+	playingPath  string    // path of currently playing file
+	playCmd      *exec.Cmd // mpv process
+	playBlink    bool      // toggles for flashing effect
+	mpvSocket    string    // path to mpv IPC socket
+	playPosition float64   // current position in seconds
+	playDuration float64   // total duration in seconds
+	playPaused   bool      // true when playback is paused
+	playVolume   float64   // current volume percentage
+	playGen      int       // generation counter to discard stale playDoneMsg
+}
+
+// tickMsg drives the play indicator blink animation.
+type tickMsg struct {
+	gen int
+}
+
+// playDoneMsg is sent when mpv finishes playing.
+type playDoneMsg struct{ gen int }
+
+func tickCmd(gen int) tea.Cmd {
+	return tea.Tick(500*time.Millisecond, func(t time.Time) tea.Msg {
+		return tickMsg{gen: gen}
+	})
 }
 
 func (m tagsModel) Init() tea.Cmd {
@@ -93,10 +123,10 @@ func (m tagsModel) visibleRows() int {
 	// Footer: account for elements that will be rendered below the list.
 	// Pagination indicator (shown when entries > visible rows, but we need
 	// to estimate conservatively to avoid chicken-and-egg).
-	chrome++ // pagination line (always reserve to avoid flicker)
+	chrome += 2 // pagination line + blank separator (always reserve to avoid flicker)
 
-	if m.statusMsg != "" {
-		chrome++ // status message line
+	if m.playingPath != "" || m.statusMsg != "" {
+		chrome++ // playback status or status message line
 	}
 	if m.mode == modeSearch || m.searchQuery != "" {
 		chrome++ // search/filter bar
@@ -116,10 +146,67 @@ func (m tagsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m = m.clampScroll()
 
+	case tickMsg:
+		if msg.gen != m.playGen || m.playingPath == "" {
+			return m, nil // stale tick from a previous playback
+		}
+		m.playBlink = !m.playBlink
+		if m.mpvSocket != "" {
+			if pos, err := queryMpvProperty(m.mpvSocket, "time-pos"); err == nil {
+				m.playPosition = pos
+			}
+			if dur, err := queryMpvProperty(m.mpvSocket, "duration"); err == nil {
+				m.playDuration = dur
+			}
+			if vol, err := queryMpvProperty(m.mpvSocket, "volume"); err == nil {
+				m.playVolume = vol
+			}
+		}
+		return m, tickCmd(m.playGen)
+
+	case playDoneMsg:
+		// Ignore stale messages from a killed mpv process
+		if msg.gen != m.playGen {
+			return m, nil
+		}
+		// Find the next non-directory file, wrapping around to the beginning
+		nextIdx := -1
+		curIdx := 0
+		for i, e := range m.entries {
+			if e.path == m.playingPath {
+				curIdx = i
+				break
+			}
+		}
+		for offset := 1; offset < len(m.entries); offset++ {
+			j := (curIdx + offset) % len(m.entries)
+			if !m.entries[j].isDir {
+				nextIdx = j
+				break
+			}
+		}
+		if m.mpvSocket != "" {
+			os.Remove(m.mpvSocket)
+		}
+		m.playingPath = ""
+		m.playCmd = nil
+		m.playBlink = false
+		m.playPaused = false
+		m.mpvSocket = ""
+		m.playPosition = 0
+		m.playDuration = 0
+		if nextIdx >= 0 {
+			m.cursor = nextIdx
+			m = m.clampScroll()
+			return m.startPlayback(m.entries[nextIdx].path)
+		}
+		m.statusMsg = "Playback finished"
+
 	case tea.KeyMsg:
 		m.statusMsg = ""
 		// ctrl+c always quits
 		if msg.String() == "ctrl+c" {
+			m.stopPlayback()
 			m.quitting = true
 			return m, tea.Quit
 		}
@@ -136,6 +223,9 @@ func (m tagsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateSearch(msg)
 		case modeFind:
 			return m.updateFind(msg)
+		case modeMpvMissing:
+			m.mode = modeBrowse
+			return m, nil
 		default:
 			return m.updateBrowse(msg)
 		}
@@ -155,10 +245,12 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m = m.applyFilter()
 			return m, nil
 		}
+		m.stopPlayback()
 		m.quitting = true
 		return m, tea.Quit
 
 	case "q":
+		m.stopPlayback()
 		m.quitting = true
 		return m, tea.Quit
 
@@ -403,6 +495,82 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.mode = modeSearch
 		m.searchInput = []rune(m.searchQuery)
 		m.searchPos = len(m.searchInput)
+
+	case "P":
+		if len(m.entries) > 0 {
+			e := m.entries[m.cursor]
+			if !e.isDir {
+				return m.startPlayback(e.path)
+			}
+		}
+
+	case "S":
+		if m.playCmd != nil && m.mpvSocket != "" {
+			sendMpvCommand(m.mpvSocket, "cycle", "pause")
+			m.playPaused = !m.playPaused
+		}
+
+	case "shift+right":
+		if m.playCmd != nil && m.mpvSocket != "" {
+			sendMpvCommand(m.mpvSocket, "seek", 10.0)
+		}
+
+	case "shift+left":
+		if m.playCmd != nil && m.mpvSocket != "" {
+			sendMpvCommand(m.mpvSocket, "seek", -10.0)
+		}
+
+	case "shift+up":
+		if m.playCmd != nil {
+			// Find previous non-directory file and play it
+			curIdx := -1
+			for i, e := range m.entries {
+				if e.path == m.playingPath {
+					curIdx = i
+					break
+				}
+			}
+			if curIdx >= 0 {
+				for i := curIdx - 1; i >= 0; i-- {
+					if !m.entries[i].isDir {
+						m.cursor = i
+						m = m.clampScroll()
+						return m.startPlayback(m.entries[i].path)
+					}
+				}
+			}
+		}
+
+	case "+", "=":
+		if m.playCmd != nil && m.mpvSocket != "" {
+			sendMpvCommand(m.mpvSocket, "add", "volume", 5.0)
+		}
+
+	case "-":
+		if m.playCmd != nil && m.mpvSocket != "" {
+			sendMpvCommand(m.mpvSocket, "add", "volume", -5.0)
+		}
+
+	case "shift+down":
+		if m.playCmd != nil {
+			// Find next non-directory file and play it
+			curIdx := -1
+			for i, e := range m.entries {
+				if e.path == m.playingPath {
+					curIdx = i
+					break
+				}
+			}
+			if curIdx >= 0 {
+				for i := curIdx + 1; i < len(m.entries); i++ {
+					if !m.entries[i].isDir {
+						m.cursor = i
+						m = m.clampScroll()
+						return m.startPlayback(m.entries[i].path)
+					}
+				}
+			}
+		}
 
 	}
 	return m, nil
@@ -1359,6 +1527,191 @@ func copyDir(src, dst string) error {
 	return nil
 }
 
+// --- Playback ---
+
+func (m *tagsModel) stopPlayback() {
+	m.playGen++ // invalidate in-flight tickMsg and playDoneMsg
+	if m.playCmd != nil && m.playCmd.Process != nil {
+		m.playCmd.Process.Kill()
+		m.playCmd.Wait()
+	}
+	if m.mpvSocket != "" {
+		os.Remove(m.mpvSocket)
+	}
+	m.playCmd = nil
+	m.playingPath = ""
+	m.playBlink = false
+	m.playPaused = false
+	m.mpvSocket = ""
+	m.playPosition = 0
+	m.playDuration = 0
+}
+
+func (m tagsModel) startPlayback(path string) (tea.Model, tea.Cmd) {
+	m.stopPlayback()
+
+	if _, err := exec.LookPath("mpv"); err != nil {
+		m.mode = modeMpvMissing
+		return m, nil
+	}
+
+	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("sndtool-mpv-%d.sock", os.Getpid()))
+	os.Remove(socketPath) // clean up any stale socket
+
+	volArg := fmt.Sprintf("--volume=%d", int(m.playVolume))
+	if m.playVolume == 0 {
+		volArg = "--volume=100"
+	}
+	cmd := exec.Command("mpv", "--no-video", volArg, "--input-ipc-server="+socketPath, path)
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	if err := cmd.Start(); err != nil {
+		m.statusMsg = "Play error: " + err.Error()
+		return m, nil
+	}
+	m.playGen++
+	m.playCmd = cmd
+	m.playingPath = path
+	m.playBlink = true
+	m.mpvSocket = socketPath
+	m.playPosition = 0
+	m.playDuration = 0
+	m.statusMsg = ""
+
+	gen := m.playGen
+	waitCmd := func() tea.Msg {
+		cmd.Wait()
+		return playDoneMsg{gen: gen}
+	}
+	return m, tea.Batch(tickCmd(m.playGen), waitCmd)
+}
+
+// sendMpvCommand sends a JSON command to mpv's IPC socket (fire-and-forget).
+func sendMpvCommand(socketPath string, args ...interface{}) error {
+	conn, err := net.DialTimeout("unix", socketPath, 100*time.Millisecond)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	conn.SetDeadline(time.Now().Add(100 * time.Millisecond))
+	payload, _ := json.Marshal(map[string]interface{}{"command": args})
+	payload = append(payload, '\n')
+	_, err = conn.Write(payload)
+	return err
+}
+
+// queryMpvProperty sends a get_property command to mpv's IPC socket.
+func queryMpvProperty(socketPath, property string) (float64, error) {
+	conn, err := net.DialTimeout("unix", socketPath, 100*time.Millisecond)
+	if err != nil {
+		return 0, err
+	}
+	defer conn.Close()
+	conn.SetDeadline(time.Now().Add(100 * time.Millisecond))
+
+	cmd := fmt.Sprintf(`{"command": ["get_property", "%s"]}`, property)
+	cmd += "\n"
+	if _, err := conn.Write([]byte(cmd)); err != nil {
+		return 0, err
+	}
+
+	buf := make([]byte, 4096)
+	n, err := conn.Read(buf)
+	if err != nil {
+		return 0, err
+	}
+
+	var resp struct {
+		Data  float64 `json:"data"`
+		Error string  `json:"error"`
+	}
+	if err := json.Unmarshal(buf[:n], &resp); err != nil {
+		return 0, err
+	}
+	if resp.Error != "success" {
+		return 0, fmt.Errorf("mpv: %s", resp.Error)
+	}
+	return resp.Data, nil
+}
+
+func formatDuration(secs float64) string {
+	m := int(secs) / 60
+	s := int(secs) % 60
+	return fmt.Sprintf("%d:%02d", m, s)
+}
+
+func (m tagsModel) renderPlaybackStatus() string {
+	// Find the artist and title for the playing entry
+	artist := ""
+	title := ""
+	for _, e := range m.entries {
+		if e.path == m.playingPath {
+			artist = e.artist
+			title = e.title
+			break
+		}
+	}
+
+	name := title
+	if name == "" {
+		name = filepath.Base(m.playingPath)
+	}
+
+	pos := formatDuration(m.playPosition)
+	dur := formatDuration(m.playDuration)
+
+	// Build progress bar
+	barWidth := 30
+	filled := 0
+	if m.playDuration > 0 {
+		filled = int(m.playPosition / m.playDuration * float64(barWidth))
+		if filled > barWidth {
+			filled = barWidth
+		}
+	}
+	bar := strings.Repeat("█", filled) + strings.Repeat("░", barWidth-filled)
+
+	speaker := "🔊"
+	if m.playPaused {
+		speaker = "⏸ "
+	} else if !m.playBlink {
+		speaker = "  "
+	}
+
+	label := name
+	if artist != "" {
+		label = artist + " — " + name
+	}
+
+	// Truncate label to fit terminal width.
+	// Display columns: "  "(2) + speaker(2) + " "(1) + LABEL + "  "(2) + bar(barWidth) + " "(1) + pos + "/"(1) + dur + " "(1) + vol
+	vol := fmt.Sprintf("vol:%d%%", int(m.playVolume))
+	fixedWidth := 10 + barWidth + len(pos) + len(dur) + len(vol)
+	maxLabel := m.width - fixedWidth
+	if maxLabel < 10 {
+		maxLabel = 10
+	}
+	labelRunes := []rune(label)
+	if len(labelRunes) > maxLabel {
+		label = string(labelRunes[:maxLabel-1]) + "…"
+	}
+
+	line := fmt.Sprintf("  %s %s  %s %s/%s %s", speaker, label, bar, pos, dur, vol)
+	return playStyle.Render(strings.TrimRight(line, " "))
+}
+
+func (m tagsModel) viewMpvMissing() string {
+	var b strings.Builder
+	b.WriteString(headerStyle.Render("sndtool — mpv not found") + "\n\n")
+	b.WriteString("  mpv is required for audio playback but was not found on your system.\n\n")
+	b.WriteString("  Install mpv:\n")
+	b.WriteString("    Linux:   sudo apt install mpv  /  sudo pacman -S mpv\n")
+	b.WriteString("    macOS:   brew install mpv\n")
+	b.WriteString("    Windows: https://mpv.io/installation/\n\n")
+	b.WriteString(dimStyle.Render("  Press any key to dismiss"))
+	return b.String()
+}
+
 // --- Views ---
 
 var (
@@ -1368,6 +1721,8 @@ var (
 	dirStyle      = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("14"))
 	statusStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
 	matchStyle    = lipgloss.NewStyle().Bold(true).Background(lipgloss.Color("11")).Foreground(lipgloss.Color("0"))
+	playStyle     = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("33"))  // blue
+	playDimStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("63"))             // dimmer blue for blink off
 )
 
 func (m tagsModel) View() string {
@@ -1387,6 +1742,8 @@ func (m tagsModel) View() string {
 		return m.viewBrowse()
 	case modeFind:
 		return m.viewFind()
+	case modeMpvMissing:
+		return m.viewMpvMissing()
 	default:
 		return m.viewBrowse()
 	}
@@ -1395,11 +1752,27 @@ func (m tagsModel) View() string {
 func (m tagsModel) viewBrowse() string {
 	var b strings.Builder
 	b.WriteString(headerStyle.Render("sndtool tags — "+m.dir) + "\n")
-	helpKeys := "j/k: nav  enter: open  e: edit  r: rename  d: del  space: mark  c/x/p: copy/cut/paste\n" +
-		"/: filter  f: find  b: back  ~: home  m: merge  q: quit"
+	helpKeys := "j/k: nav  enter: open  e: edit  r: rename  d: del  /: filter  space: mark  c/x/p: copy/cut/paste\n" +
+		"f: find  b: back  ~: home  m: merge  P: play  S: pause  ⇧←→: seek  ⇧↑↓: prev/next  +/-: vol  q: quit"
 	b.WriteString(dimStyle.Render(helpKeys) + "\n\n")
 
-	heading := fmt.Sprintf("   %-40s  %-20s  %-20s  %-30s  %s", "File", "Artist", "Album", "Title", "Year")
+	// Calculate dynamic column widths based on terminal width.
+	// Fixed overhead: cursor(2) + mark(1) + 4 column gaps(2 each=8) + year(4) = 15
+	const colGap = "  "
+	fixedOverhead := 15
+	avail := m.width - fixedOverhead
+	if avail < 40 {
+		avail = 40
+	}
+	// Distribute: File 35%, Artist 15%, Album 21%, Title 29%
+	colFile := avail * 35 / 100
+	colArtist := avail * 15 / 100
+	colAlbum := avail * 21 / 100
+	colTitle := avail - colFile - colArtist - colAlbum
+
+	headFmt := fmt.Sprintf("   %%-%ds%s%%-%ds%s%%-%ds%s%%-%ds%s%%s",
+		colFile, colGap, colArtist, colGap, colAlbum, colGap, colTitle, colGap)
+	heading := fmt.Sprintf(headFmt, "File", "Artist", "Album", "Title", "Year")
 	b.WriteString(headerStyle.Render(hscrollLine(heading, m.hscroll, m.width)) + "\n")
 
 	vis := m.visibleRows()
@@ -1408,11 +1781,30 @@ func (m tagsModel) viewBrowse() string {
 		end = len(m.entries)
 	}
 
+	rowFmt := fmt.Sprintf("%%s%%s%%-%ds%s%%-%ds%s%%-%ds%s%%-%ds%s%%s",
+		colFile, colGap, colArtist, colGap, colAlbum, colGap, colTitle, colGap)
+
 	for i := m.offset; i < end; i++ {
 		e := m.entries[i]
+		isPlaying := m.playingPath != "" && e.path == m.playingPath
 		cursor := "  "
 		style := lipgloss.NewStyle()
-		if i == m.cursor {
+		if isPlaying {
+			cursor = "🔊"
+			if i == m.cursor {
+				if m.playBlink {
+					style = playStyle
+				} else {
+					style = selectedStyle
+				}
+			} else {
+				if m.playBlink {
+					style = playStyle
+				} else {
+					style = playDimStyle
+				}
+			}
+		} else if i == m.cursor {
 			cursor = "> "
 			style = selectedStyle
 		}
@@ -1425,18 +1817,18 @@ func (m tagsModel) viewBrowse() string {
 		var line string
 		if e.isDir {
 			name := e.name + "/"
-			if i != m.cursor {
+			if i != m.cursor && !isPlaying {
 				style = dirStyle
 			}
-			line = fmt.Sprintf("%s%s%-40s  %-20s  %-20s  %-30s  %s",
-				cursor, mark, truncate(name, 40), "", "", "<dir>", "")
+			line = fmt.Sprintf(rowFmt,
+				cursor, mark, truncate(name, colFile), "", "", "<dir>", "")
 		} else {
-			line = fmt.Sprintf("%s%s%-40s  %-20s  %-20s  %-30s  %s",
+			line = fmt.Sprintf(rowFmt,
 				cursor, mark,
-				truncate(e.name, 40),
-				truncate(e.artist, 20),
-				truncate(e.album, 20),
-				truncate(e.title, 30),
+				truncate(e.name, colFile),
+				truncate(e.artist, colArtist),
+				truncate(e.album, colAlbum),
+				truncate(e.title, colTitle),
 				e.year,
 			)
 		}
@@ -1453,7 +1845,9 @@ func (m tagsModel) viewBrowse() string {
 		b.WriteString(dimStyle.Render(fmt.Sprintf("\n  [%d/%d]", m.cursor+1, len(m.entries))))
 	}
 
-	if m.statusMsg != "" {
+	if m.playingPath != "" {
+		b.WriteString("\n" + m.renderPlaybackStatus())
+	} else if m.statusMsg != "" {
 		b.WriteString("\n" + statusStyle.Render("  "+m.statusMsg))
 	}
 

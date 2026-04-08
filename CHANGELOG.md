@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- TUI: audio playback via mpv — `P` plays current file with progress bar,
+  artist/title display, and auto-advance to next track; `S` pauses/resumes;
+  `Shift+←/→` seeks ±10s; `Shift+↑/↓` skips to prev/next song; `+`/`-`/`=`
+  adjusts volume (persisted across tracks); shows mpv install instructions if
+  not found
+- TUI: dynamic column widths scale to terminal width
+- Docs: add screenshot to README; document mpv dependency
 - TUI: fix header/location line being pushed off screen by long directory listings
 - TUI: `f` opens fuzzy finder that recursively searches files/dirs by name or tags
 - TUI: `b` navigates back to previous directory before a jump

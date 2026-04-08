@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- TUI: add Album column to browse view
 - Docs: add Contributing section to README with links to Issues, PRs, and Discussions
 
 ## v0.0.5 (2026-03-13)

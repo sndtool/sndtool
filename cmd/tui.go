@@ -870,7 +870,7 @@ func (m tagsModel) viewBrowse() string {
 	b.WriteString(headerStyle.Render("sndtool tags — "+m.dir) + "\n")
 	b.WriteString(dimStyle.Render("j/k: nav  pgdn/pgup: page  enter: open  e: edit  r: rename  m: merge  d: del  space: mark  c: copy  x: cut  p: paste  q: quit") + "\n\n")
 
-	heading := fmt.Sprintf("   %-40s  %-20s  %-30s  %s", "File", "Artist", "Title", "Year")
+	heading := fmt.Sprintf("   %-40s  %-20s  %-20s  %-30s  %s", "File", "Artist", "Album", "Title", "Year")
 	b.WriteString(headerStyle.Render(hscrollLine(heading, m.hscroll, m.width)) + "\n")
 
 	vis := m.visibleRows()
@@ -899,13 +899,14 @@ func (m tagsModel) viewBrowse() string {
 			if i != m.cursor {
 				style = dirStyle
 			}
-			line = fmt.Sprintf("%s%s%-40s  %-20s  %-30s  %s",
-				cursor, mark, truncate(name, 40), "", "<dir>", "")
+			line = fmt.Sprintf("%s%s%-40s  %-20s  %-20s  %-30s  %s",
+				cursor, mark, truncate(name, 40), "", "", "<dir>", "")
 		} else {
-			line = fmt.Sprintf("%s%s%-40s  %-20s  %-30s  %s",
+			line = fmt.Sprintf("%s%s%-40s  %-20s  %-20s  %-30s  %s",
 				cursor, mark,
 				truncate(e.name, 40),
 				truncate(e.artist, 20),
+				truncate(e.album, 20),
 				truncate(e.title, 30),
 				e.year,
 			)

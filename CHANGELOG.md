@@ -6,6 +6,11 @@
   title tags; displays results in columnar browse view with full edit/play support
 - TUI: find (`f`) now uses the same columnar browse view; all browse keybindings
   (edit, play, mark, etc.) work in find results; search input at bottom like filter
+- TUI: filter (`/`) works inside find results for two-level search
+- TUI: increase max find results from 200 to 2000
+- TUI: skip non-playable files and directories when using Shift+↑/↓ and
+  auto-advance; wrap around at start/end of list
+- TUI: fix Shift+↑/↓ not skipping back to the currently playing file
 
 ## v0.1.0 (2026-04-08)
 

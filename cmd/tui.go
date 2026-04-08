@@ -180,7 +180,7 @@ func (m tagsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		for offset := 1; offset < len(m.entries); offset++ {
 			j := (curIdx + offset) % len(m.entries)
-			if !m.entries[j].isDir {
+			if !m.entries[j].isDir && isPlayable(m.entries[j].path) {
 				nextIdx = j
 				break
 			}
@@ -381,7 +381,11 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.findPos = 0
 			m.findActive = true
 			m.findTitle = "Find (recursive)"
+			m.allEntries = nil
 			m.entries = nil
+			m.searchQuery = ""
+			m.searchInput = nil
+			m.searchPos = 0
 			m.cursor = 0
 			m.offset = 0
 			m.marked = nil
@@ -571,7 +575,6 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "shift+up":
 		if m.playCmd != nil {
-			// Find previous non-directory file and play it
 			curIdx := -1
 			for i, e := range m.entries {
 				if e.path == m.playingPath {
@@ -579,12 +582,13 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					break
 				}
 			}
-			if curIdx >= 0 {
-				for i := curIdx - 1; i >= 0; i-- {
-					if !m.entries[i].isDir {
-						m.cursor = i
+			if curIdx >= 0 && len(m.entries) > 1 {
+				for offset := 1; offset < len(m.entries); offset++ {
+					j := (curIdx - offset + len(m.entries)) % len(m.entries)
+					if j != curIdx && !m.entries[j].isDir && isPlayable(m.entries[j].path) {
+						m.cursor = j
 						m = m.clampScroll()
-						return m.startPlayback(m.entries[i].path)
+						return m.startPlayback(m.entries[j].path)
 					}
 				}
 			}
@@ -602,7 +606,6 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "shift+down":
 		if m.playCmd != nil {
-			// Find next non-directory file and play it
 			curIdx := -1
 			for i, e := range m.entries {
 				if e.path == m.playingPath {
@@ -610,12 +613,13 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					break
 				}
 			}
-			if curIdx >= 0 {
-				for i := curIdx + 1; i < len(m.entries); i++ {
-					if !m.entries[i].isDir {
-						m.cursor = i
+			if curIdx >= 0 && len(m.entries) > 1 {
+				for offset := 1; offset < len(m.entries); offset++ {
+					j := (curIdx + offset) % len(m.entries)
+					if j != curIdx && !m.entries[j].isDir && isPlayable(m.entries[j].path) {
+						m.cursor = j
 						m = m.clampScroll()
-						return m.startPlayback(m.entries[i].path)
+						return m.startPlayback(m.entries[j].path)
 					}
 				}
 			}
@@ -626,7 +630,11 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.findTitle = "Quality Check — missing tags"
 		m.findInput = nil
 		m.findPos = 0
+		m.searchQuery = ""
+		m.searchInput = nil
+		m.searchPos = 0
 		results := searchMissingTags(m.startDir)
+		m.allEntries = results
 		m.entries = results
 		m.cursor = 0
 		m.offset = 0
@@ -1186,7 +1194,7 @@ func (m tagsModel) applyFilter() tagsModel {
 
 // --- Find mode (recursive fuzzy finder) ---
 
-const maxFindResults = 200
+const maxFindResults = 2000
 
 // searchRecursive walks the directory tree from root and returns entries matching query.
 func searchRecursive(root, query string) []tagEntry {
@@ -1380,7 +1388,13 @@ func (m tagsModel) updateFind(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m tagsModel) runFind() tagsModel {
 	query := strings.TrimSpace(string(m.findInput))
-	m.entries = searchRecursive(m.startDir, query)
+	results := searchRecursive(m.startDir, query)
+	m.allEntries = results
+	m.entries = results
+	// Clear any active filter so it doesn't hide find results
+	m.searchQuery = ""
+	m.searchInput = nil
+	m.searchPos = 0
 	m.cursor = 0
 	m.offset = 0
 	m.marked = nil
@@ -1540,6 +1554,16 @@ func copyDir(src, dst string) error {
 }
 
 // --- Playback ---
+
+// isPlayable returns true if the file has an audio extension that mpv can play.
+func isPlayable(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	switch ext {
+	case ".mp3", ".flac", ".ogg", ".opus", ".wav", ".m4a", ".aac", ".wma":
+		return true
+	}
+	return false
+}
 
 func (m *tagsModel) stopPlayback() {
 	m.playGen++ // invalidate in-flight tickMsg and playDoneMsg

@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## v0.1.1 (2026-04-08)
+## v0.1.2 (2026-04-08)
 
 - TUI: `Q` quality check — recursively finds MP3 files missing artist, album, or
   title tags; displays results in columnar browse view with full edit/play

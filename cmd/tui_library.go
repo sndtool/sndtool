@@ -38,11 +38,12 @@ type libEntry struct {
 }
 
 type libDrill struct {
-	query   string
-	results []libEntry
-	cursor  int
-	offset  int
-	label   string
+	query      string
+	results    []libEntry
+	cursor     int
+	offset     int
+	label      string
+	playlistID int64 // non-zero when drilled into a playlist
 }
 
 // --- Styles ---
@@ -320,6 +321,95 @@ func (m tagsModel) updateLibraryBrowsing(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m = m.openPlaylistPicker(paths)
+		return m, nil
+
+	case "d":
+		if n == 0 || m.db == nil {
+			return m, nil
+		}
+		// Check if we're inside a playlist drill-down
+		if len(m.libDrillStack) > 0 {
+			top := m.libDrillStack[len(m.libDrillStack)-1]
+			if top.playlistID != 0 {
+				// Remove marked/cursor tracks from this playlist
+				var paths []string
+				if len(m.marked) > 0 {
+					for idx, marked := range m.marked {
+						if marked && idx < len(m.libResults) {
+							e := m.libResults[idx]
+							if e.entryType == libEntryTrack {
+								paths = append(paths, e.path)
+							}
+						}
+					}
+				} else {
+					e := m.libResults[m.libCursor]
+					if e.entryType == libEntryTrack {
+						paths = append(paths, e.path)
+					}
+				}
+				if len(paths) > 0 {
+					if err := RemoveFromPlaylist(m.db, top.playlistID, paths); err != nil {
+						m.statusMsg = "Error removing from playlist: " + err.Error()
+					} else {
+						m.statusMsg = fmt.Sprintf("Removed %d track(s) from playlist", len(paths))
+						m.marked = nil
+						// Refresh playlist tracks
+						tracks, err := GetPlaylistTracks(m.db, top.playlistID)
+						if err == nil {
+							m.libResults = nil
+							for _, t := range tracks {
+								m.libResults = append(m.libResults, libEntry{
+									entryType: libEntryTrack,
+									label:     t.Title,
+									sublabel:  t.Artist,
+									path:      t.Path,
+									artist:    t.Artist,
+									album:     t.Album,
+									title:     t.Title,
+									year:      t.Year,
+									duration:  t.Duration,
+								})
+							}
+							if m.libCursor >= len(m.libResults) && m.libCursor > 0 {
+								m.libCursor = len(m.libResults) - 1
+							}
+							m.clampLibraryScroll()
+						}
+					}
+				}
+				return m, nil
+			}
+		}
+		// If cursor is on a playlist entry in a playlist view, delete the playlist
+		if n > 0 {
+			e := m.libResults[m.libCursor]
+			if e.entryType == libEntryPlaylist {
+				if err := DeletePlaylist(m.db, e.playlistID); err != nil {
+					m.statusMsg = "Error deleting playlist: " + err.Error()
+				} else {
+					m.statusMsg = fmt.Sprintf("Deleted playlist \"%s\"", e.label)
+					m.marked = nil
+					// Refresh playlist list
+					m.libQueryPlaylists(nil)
+					if m.libCursor >= len(m.libResults) && m.libCursor > 0 {
+						m.libCursor = len(m.libResults) - 1
+					}
+					m.clampLibraryScroll()
+				}
+				return m, nil
+			}
+		}
+		return m, nil
+
+	case "r":
+		if n == 0 || m.db == nil {
+			return m, nil
+		}
+		e := m.libResults[m.libCursor]
+		if e.entryType == libEntryPlaylist {
+			m.statusMsg = "Rename: use :playlist to manage playlists (rename not yet supported inline)"
+		}
 		return m, nil
 
 	case " ":
@@ -663,13 +753,17 @@ func (m *tagsModel) libDrillInto(entry libEntry) {
 	}
 
 	// Save current state
-	m.libDrillStack = append(m.libDrillStack, libDrill{
+	drill := libDrill{
 		query:   m.libQuery,
 		results: m.libResults,
 		cursor:  m.libCursor,
 		offset:  m.libOffset,
 		label:   entry.label,
-	})
+	}
+	if entry.entryType == libEntryPlaylist {
+		drill.playlistID = entry.playlistID
+	}
+	m.libDrillStack = append(m.libDrillStack, drill)
 
 	m.libCursor = 0
 	m.libOffset = 0

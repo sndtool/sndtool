@@ -151,11 +151,21 @@ func tickCmd(gen int) tea.Cmd {
 	})
 }
 
+// libraryReadyMsg triggers the default library query on startup.
+type libraryReadyMsg struct{}
+
 func (m tagsModel) Init() tea.Cmd {
+	var cmds []tea.Cmd
 	if m.db != nil {
-		return m.scanCmd()
+		cmds = append(cmds, m.scanCmd())
 	}
-	return nil
+	if m.viewMode == viewLibrary {
+		cmds = append(cmds, func() tea.Msg { return libraryReadyMsg{} })
+	}
+	if len(cmds) == 0 {
+		return nil
+	}
+	return tea.Batch(cmds...)
 }
 
 // scanDoneMsg is sent when the background scanner finishes.
@@ -245,6 +255,11 @@ func (m tagsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case scanDoneMsg:
 		m.statusMsg = fmt.Sprintf("Scan: %d added, %d updated, %d removed",
 			msg.stats.Added, msg.stats.Updated, msg.stats.Deleted)
+		return m, nil
+
+	case libraryReadyMsg:
+		m.libQuery = "album"
+		m.executeLibraryQuery()
 		return m, nil
 
 	case tea.KeyMsg:

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- TUI: flash only the speaker emoji instead of the entire line during playback
+
 ## v0.1.2 (2026-04-08)
 
 - TUI: `Q` quality check — recursively finds MP3 files missing artist, album, or

@@ -1805,8 +1805,7 @@ var (
 	dirStyle      = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("14"))
 	statusStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
 	matchStyle    = lipgloss.NewStyle().Bold(true).Background(lipgloss.Color("11")).Foreground(lipgloss.Color("0"))
-	playStyle     = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("33")) // blue
-	playDimStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("63"))            // dimmer blue for blink off
+	playStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("33")) // blue
 )
 
 func (m tagsModel) View() string {
@@ -1879,19 +1878,15 @@ func (m tagsModel) viewBrowse() string {
 		cursor := "  "
 		style := lipgloss.NewStyle()
 		if isPlaying {
-			cursor = "🔊"
-			if i == m.cursor {
-				if m.playBlink {
-					style = playStyle
-				} else {
-					style = selectedStyle
-				}
+			if m.playBlink {
+				cursor = "🔊"
 			} else {
-				if m.playBlink {
-					style = playStyle
-				} else {
-					style = playDimStyle
-				}
+				cursor = "  "
+			}
+			if i == m.cursor {
+				style = selectedStyle
+			} else {
+				style = playStyle
 			}
 		} else if i == m.cursor {
 			cursor = "> "

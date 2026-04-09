@@ -433,3 +433,66 @@ issues.
 3. Results are loaded into `[]tagEntry` (same struct used in file browser).
 4. Rendering reuses existing columnar display code where possible.
 5. Drill-down maintains a stack of query states for back-navigation.
+
+## Testing
+
+### Test Data
+
+- **`testdata/` directory** — a small set of minimal MP3 files (1 second of
+  silence each) with known ID3 tags committed to the repo. Covers: multiple
+  artists, multiple albums per artist, tracks with and without tags, various
+  years/genres. ~10 files total.
+- **In-memory SQLite** — for DB and query tests, insert rows programmatically
+  with known values. No MP3 files needed.
+
+### Test Categories
+
+#### 1. Query Parser (`cmd/query_test.go`)
+
+Pure unit tests — input string to parsed query struct:
+- View keyword extraction: `"album sermon"` → view=album, terms=["sermon"]
+- Multiple filter terms: `"album sunday sermon"` → terms=["sunday","sermon"]
+- Field filters: `"album sermon year 2025"` → terms=["sermon"], year=["2025"]
+- Bare text (no view keyword): `"sermon on hope"` → view=mixed, terms=["sermon","on","hope"]
+- Edge cases: empty input, only keywords, unknown words
+
+#### 2. DB Layer (`cmd/db_test.go`)
+
+In-memory SQLite, insert known data, verify queries:
+- Schema creation and migrations
+- Insert/update/delete tracks
+- Query by artist, album, year, genre with filtering
+- Mixed search (artists + albums + tracks sections)
+- Playlist CRUD: create, rename, delete
+- Playlist tracks: add, remove, reorder
+- Stale record cleanup (deleted files)
+
+#### 3. Scanner (`cmd/scanner_test.go`)
+
+Uses `testdata/` fixtures in a temp directory:
+- Initial scan populates DB with correct tags
+- Incremental scan: modify a file's mtime, verify re-read
+- Deleted file detection: remove a file, scan, verify DB cleanup
+- New file detection: add a file, scan, verify DB insert
+- Non-MP3 files are ignored
+
+#### 4. Queue (`cmd/queue_test.go`)
+
+In-memory operations on the queue data structure:
+- Create queue from track list (P behavior)
+- Append tracks to existing queue (A behavior)
+- Append with marks vs append all
+- Remove tracks
+- Advance to next track, boundary at end of queue
+- Save queue as playlist (verify DB records)
+- Empty queue edge cases
+
+#### 5. TUI Integration (`cmd/tui_test.go`)
+
+Use Bubble Tea's `model.Update()` to send key messages and assert model state:
+- Mode cycling: `v` rotates Files → Library → Queue → Files
+- Library: `:` opens query, enter commits, results appear
+- Library drill-down: enter on album → tracks, backspace → back
+- Queue: `P` replaces queue, `A` appends, `d` removes
+- Playlist picker: `a` opens picker, enter selects
+- Playback state persists across mode switches

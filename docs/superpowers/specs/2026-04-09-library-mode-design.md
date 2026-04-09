@@ -7,24 +7,90 @@ The library provides artist/album/genre/year/playlist browsing via a command-dri
 query language, while the existing file-browser mode is preserved for direct file
 management. A background scanner keeps the database in sync with files on disk.
 
-## Two Modes
+## Three Modes
 
-sndtool operates in one of two modes, toggled with `v`:
+sndtool has three viewing modes, cycled with `v`:
 
-- **Library mode** — browse by metadata using the `:` query language. Requires
+- **Files** — existing directory/file browser. No database required. Uses `/`
+  for filtering.
+- **Library** — browse by metadata using the `:` query language. Requires
   `sndtool.db`.
-- **File browser mode** — existing directory/file browsing. No database required.
-  Uses `/` for filtering.
+- **Queue** — view and manage the current play queue.
 
-Pressing `v` switches between modes:
-- From library → file browser:
+Pressing `v` cycles: Files → Library → Queue → Files. Each mode remembers its
+state (cursor position, current query, etc.) when switching away.
+
+Context-aware switching:
+- From library to files:
   - On a track: opens the directory containing that track.
   - On an album: opens the directory containing the album's tracks.
   - On an artist/genre/year: opens file browser at the root music directory.
-- From file browser → library: returns to the last query/view in library mode.
+- From files to library: returns to the last query/view in library mode.
+- To/from queue: always shows the current play queue.
 
-Playback (mpv) is shared across both modes. The playback status bar at the bottom
+If no `sndtool.db` exists and the user declined to create one, `v` toggles
+between Files and Queue only (library is unavailable).
+
+Playback (mpv) is shared across all modes. The playback status bar at the bottom
 persists regardless of mode.
+
+## Play Queue
+
+The play queue is an in-memory ordered list of tracks that drives playback. It
+is independent of the current view — navigating away does not interrupt playback.
+
+### Creating the Queue
+
+`P` replaces the current queue and starts playing:
+- On a track: queue = all playable tracks in the current context (directory,
+  album, playlist, search results), starting from the selected track.
+- On an album: queue = all tracks in that album.
+- On a playlist: queue = all tracks in that playlist.
+- On marked items: queue = marked items in display order.
+
+`A` (shift+a) appends to the existing queue without interrupting playback:
+- Same item selection as `P`, but tracks are added to the end of the queue.
+- If nothing is playing, `A` behaves like `P`.
+
+### Auto-Advance
+
+When a track finishes, the next track in the queue plays automatically. When
+the queue is exhausted, playback stops.
+
+### Queue View
+
+The queue view (accessed via `v`) shows all tracks in play order:
+
+```
+  Queue (12 tracks)
+  ─────────────────────────────────────────────────────────────
+  1   Johnson, Mark    Sunday Sermons   New Year Message
+🔊2   Johnson, Mark    Sunday Sermons   Walking in Faith
+  3   Johnson, Mark    Sunday Sermons   Love and Grace
+  4   Smith, David     Sermon Series    Sermon on Hope
+  ─────────────────────────────────────────────────────────────
+  [4/12] d to remove, a to save as playlist
+```
+
+The currently playing track is marked with the speaker indicator. The cursor
+can be on any track independently of what's playing.
+
+### Queue Operations
+
+| Key     | Action                                       |
+|---------|----------------------------------------------|
+| `d`     | Remove selected/marked tracks from queue      |
+| `space` | Mark tracks                                   |
+| `a`     | Save entire queue as a new playlist           |
+| `P`     | Jump playback to the selected track           |
+| `j`/`k` | Navigate                                     |
+
+### Queue Lifetime
+
+The queue exists only in memory. It is cleared when:
+- The user presses `P` (replaced with new queue).
+- All tracks are removed.
+- sndtool exits.
 
 ## Startup Flow
 
@@ -278,17 +344,39 @@ Deleting a playlist itself: `d` when the cursor is on a playlist in the
 
 ## Key Bindings
 
-### New Keys
+### New Keys (All Modes)
 
-| Key | Context        | Action                              |
-|-----|----------------|-------------------------------------|
-| `v` | Both modes     | Toggle Library / File Browser       |
-| `:` | Library mode   | Open/edit query prompt              |
-| `a` | Both modes     | Add track/album/marked to playlist  |
+| Key | Action                                              |
+|-----|-----------------------------------------------------|
+| `v` | Cycle viewing mode: Files → Library → Queue → Files |
+| `A` | Append track/album/marked to end of play queue      |
+
+### New Keys (Library Mode)
+
+| Key | Action                              |
+|-----|-------------------------------------|
+| `:` | Open/edit query prompt              |
+| `a` | Add track/album/marked to playlist  |
+
+### New Keys (Queue Mode)
+
+| Key | Action                                       |
+|-----|----------------------------------------------|
+| `d` | Remove selected/marked tracks from queue      |
+| `a` | Save entire queue as a new playlist           |
+| `P` | Jump playback to selected track               |
+
+### Playback Keys (All Modes)
+
+| Key | Action                                              |
+|-----|-----------------------------------------------------|
+| `P` | Replace queue with current context, start playing   |
+| `S` | Pause/resume playback                               |
+| `Shift+←/→` | Seek backward/forward 10s                  |
+| `Shift+↑/↓` | Previous/next track in queue               |
+| `+`/`-`     | Volume up/down                              |
 
 ### Existing Keys in Library Mode
-
-All existing navigation keys work in library mode with the same semantics:
 
 | Key            | Action in library mode                     |
 |----------------|--------------------------------------------|
@@ -296,11 +384,7 @@ All existing navigation keys work in library mode with the same semantics:
 | `enter`        | Drill into group / play track              |
 | `h`/backspace  | Go back one level                          |
 | `space`        | Mark items                                 |
-| `P`            | Play track                                 |
 | `e`            | Edit tags (on tracks)                      |
-| `S`            | Pause/resume playback                      |
-| `Shift+arrows` | Seek / prev/next track                     |
-| `+`/`-`        | Volume                                     |
 | `Esc`          | Clear query / exit library mode            |
 | `q`            | Quit                                       |
 
@@ -316,8 +400,9 @@ All existing navigation keys work in library mode with the same semantics:
 
 ## File Browser Mode
 
-Unchanged from current behavior. All existing keybindings preserved. The `a` key
-is added for playlist support (requires DB to exist).
+Unchanged from current behavior. All existing keybindings preserved. `P` now
+creates a play queue from the current directory. `A` appends to the queue. `a`
+adds to a saved playlist (requires DB to exist).
 
 ## Architecture Notes
 

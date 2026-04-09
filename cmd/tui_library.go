@@ -221,7 +221,35 @@ func (m tagsModel) updateLibraryBrowsing(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case "v":
-		m.viewMode = viewQueue
+		// Context-aware: navigate to the relevant directory in file browser
+		targetDir := m.startDir
+		if n > 0 {
+			e := m.libResults[m.libCursor]
+			switch e.entryType {
+			case libEntryTrack:
+				if e.path != "" {
+					targetDir = filepath.Dir(e.path)
+				}
+			case libEntryAlbum:
+				if m.db != nil {
+					ff := map[string][]string{"album": {e.album}}
+					albumTracks, err := QueryTracks(m.db, nil, ff)
+					if err == nil && len(albumTracks) > 0 {
+						targetDir = filepath.Dir(albumTracks[0].Path)
+					}
+				}
+			}
+		}
+		entries, err := loadTags(targetDir)
+		if err == nil {
+			m.dir = targetDir
+			m.allEntries = entries
+			m.entries = entries
+			m.cursor = 0
+			m.offset = 0
+			m.marked = nil
+		}
+		m.viewMode = viewFiles
 		return m, nil
 
 	case "esc":

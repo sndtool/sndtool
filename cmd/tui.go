@@ -128,6 +128,13 @@ type tagsModel struct {
 	playPaused   bool      // true when playback is paused
 	playVolume   float64   // current volume percentage
 	playGen      int       // generation counter to discard stale playDoneMsg
+
+	// Playlist picker state (modePlaylistPicker)
+	pickerPlaylists []PlaylistResult
+	pickerCursor    int
+	pickerPaths     []string // track paths to add
+	pickerNewName   []rune   // new playlist name input
+	pickerNaming    bool     // true when entering new name
 }
 
 // tickMsg drives the play indicator blink animation.
@@ -276,6 +283,8 @@ func (m tagsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case modeMpvMissing:
 			m.mode = modeBrowse
 			return m, nil
+		case modePlaylistPicker:
+			return m.updatePlaylistPicker(msg)
 		default:
 			return m.updateBrowse(msg)
 		}
@@ -680,6 +689,31 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			track := m.queue.Current()
 			return m.startPlayback(track.Path)
 		}
+		return m, nil
+
+	case "a":
+		if m.db == nil {
+			m.statusMsg = "No library database (run in a directory with sndtool.db)"
+			return m, nil
+		}
+		var paths []string
+		if m.marked != nil && len(m.marked) > 0 {
+			for i, entry := range m.entries {
+				if m.marked[i] && !entry.isDir && isPlayable(entry.path) {
+					paths = append(paths, entry.path)
+				}
+			}
+		} else if len(m.entries) > 0 {
+			e := m.entries[m.cursor]
+			if !e.isDir && isPlayable(e.path) {
+				paths = append(paths, e.path)
+			}
+		}
+		if len(paths) == 0 {
+			m.statusMsg = "No playable file selected"
+			return m, nil
+		}
+		m = m.openPlaylistPicker(paths)
 		return m, nil
 
 	case "S":
@@ -1934,6 +1968,8 @@ func (m tagsModel) View() string {
 		return m.viewBrowse()
 	case modeMpvMissing:
 		return m.viewMpvMissing()
+	case modePlaylistPicker:
+		return m.viewPlaylistPicker()
 	default:
 		return m.viewBrowse()
 	}

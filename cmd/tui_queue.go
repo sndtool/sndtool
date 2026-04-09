@@ -95,7 +95,20 @@ func (m tagsModel) updateQueue(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case "a":
-		m.statusMsg = "Save as playlist — not yet implemented"
+		if m.db == nil {
+			m.statusMsg = "No library database"
+			return m, nil
+		}
+		var paths []string
+		for _, t := range tracks {
+			paths = append(paths, t.Path)
+		}
+		if len(paths) == 0 {
+			m.statusMsg = "Queue is empty"
+			return m, nil
+		}
+		m = m.openPlaylistPicker(paths)
+		return m, nil
 
 	case "S":
 		if m.playCmd != nil && m.mpvSocket != "" {

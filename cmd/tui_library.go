@@ -250,7 +250,48 @@ func (m tagsModel) updateLibraryBrowsing(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.libAppendToQueue()
 
 	case "a":
-		m.statusMsg = "Add to playlist -- not yet implemented"
+		if m.db == nil {
+			m.statusMsg = "No library database"
+			return m, nil
+		}
+		var paths []string
+		// Check marked items first
+		if len(m.marked) > 0 {
+			for idx, marked := range m.marked {
+				if marked && idx < len(m.libResults) {
+					e := m.libResults[idx]
+					if e.entryType == libEntryTrack && e.path != "" {
+						paths = append(paths, e.path)
+					} else if (e.entryType == libEntryAlbum) && e.album != "" {
+						ff := map[string][]string{"album": {e.album}}
+						albumTracks, err := QueryTracks(m.db, nil, ff)
+						if err == nil {
+							for _, t := range albumTracks {
+								paths = append(paths, t.Path)
+							}
+						}
+					}
+				}
+			}
+		} else if n > 0 {
+			e := m.libResults[m.libCursor]
+			if e.entryType == libEntryTrack && e.path != "" {
+				paths = append(paths, e.path)
+			} else if e.entryType == libEntryAlbum && e.album != "" {
+				ff := map[string][]string{"album": {e.album}}
+				albumTracks, err := QueryTracks(m.db, nil, ff)
+				if err == nil {
+					for _, t := range albumTracks {
+						paths = append(paths, t.Path)
+					}
+				}
+			}
+		}
+		if len(paths) == 0 {
+			m.statusMsg = "No tracks to add"
+			return m, nil
+		}
+		m = m.openPlaylistPicker(paths)
 		return m, nil
 
 	case " ":

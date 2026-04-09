@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	_ "modernc.org/sqlite"
 )
@@ -95,6 +96,15 @@ type YearResult struct {
 type GenreResult struct {
 	Genre      string
 	TrackCount int
+}
+
+// PlaylistResult holds summary data for a playlist.
+type PlaylistResult struct {
+	ID         int64
+	Name       string
+	TrackCount int
+	Created    int64
+	Updated    int64
 }
 
 // --- Track CRUD ---
@@ -363,6 +373,144 @@ func QueryAlbumsWithYear(db *sql.DB, year string) ([]AlbumResult, error) {
 			return nil, fmt.Errorf("scan album: %w", err)
 		}
 		results = append(results, r)
+	}
+	return results, rows.Err()
+}
+
+// --- Playlist CRUD ---
+
+// CreatePlaylist creates a new playlist with the given name and returns its ID.
+func CreatePlaylist(db *sql.DB, name string) (int64, error) {
+	now := time.Now().Unix()
+	res, err := db.Exec(
+		"INSERT INTO playlists (name, created, updated) VALUES (?, ?, ?)",
+		name, now, now,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("create playlist %q: %w", name, err)
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("last insert id: %w", err)
+	}
+	return id, nil
+}
+
+// DeletePlaylist deletes the playlist with the given ID (cascade deletes playlist_tracks).
+func DeletePlaylist(db *sql.DB, id int64) error {
+	_, err := db.Exec("DELETE FROM playlists WHERE id = ?", id)
+	if err != nil {
+		return fmt.Errorf("delete playlist %d: %w", id, err)
+	}
+	return nil
+}
+
+// RenamePlaylist renames the playlist with the given ID.
+func RenamePlaylist(db *sql.DB, id int64, name string) error {
+	now := time.Now().Unix()
+	_, err := db.Exec(
+		"UPDATE playlists SET name = ?, updated = ? WHERE id = ?",
+		name, now, id,
+	)
+	if err != nil {
+		return fmt.Errorf("rename playlist %d: %w", id, err)
+	}
+	return nil
+}
+
+// ListPlaylists returns playlists optionally filtered by terms matching the name.
+func ListPlaylists(db *sql.DB, terms []string) ([]PlaylistResult, error) {
+	q := `SELECT p.id, p.name, COUNT(pt.track_path) AS track_count, p.created, p.updated
+		FROM playlists p
+		LEFT JOIN playlist_tracks pt ON pt.playlist_id = p.id`
+
+	clause, args := likeFilters(terms, "p.name")
+	if clause != "" {
+		q += " WHERE " + clause
+	}
+	q += " GROUP BY p.id ORDER BY p.name"
+
+	rows, err := db.Query(q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list playlists: %w", err)
+	}
+	defer rows.Close()
+
+	var results []PlaylistResult
+	for rows.Next() {
+		var r PlaylistResult
+		if err := rows.Scan(&r.ID, &r.Name, &r.TrackCount, &r.Created, &r.Updated); err != nil {
+			return nil, fmt.Errorf("scan playlist: %w", err)
+		}
+		results = append(results, r)
+	}
+	return results, rows.Err()
+}
+
+// AddToPlaylist appends the given paths to a playlist, auto-incrementing position.
+func AddToPlaylist(db *sql.DB, playlistID int64, paths []string) error {
+	// find current max position
+	var maxPos int
+	err := db.QueryRow(
+		"SELECT COALESCE(MAX(position), -1) FROM playlist_tracks WHERE playlist_id = ?",
+		playlistID,
+	).Scan(&maxPos)
+	if err != nil {
+		return fmt.Errorf("get max position: %w", err)
+	}
+
+	now := time.Now().Unix()
+	for i, path := range paths {
+		_, err := db.Exec(
+			"INSERT OR IGNORE INTO playlist_tracks (playlist_id, track_path, position) VALUES (?, ?, ?)",
+			playlistID, path, maxPos+1+i,
+		)
+		if err != nil {
+			return fmt.Errorf("add %q to playlist %d: %w", path, playlistID, err)
+		}
+	}
+
+	// update playlist updated timestamp
+	_, err = db.Exec("UPDATE playlists SET updated = ? WHERE id = ?", now, playlistID)
+	return err
+}
+
+// RemoveFromPlaylist removes the given paths from a playlist.
+func RemoveFromPlaylist(db *sql.DB, playlistID int64, paths []string) error {
+	now := time.Now().Unix()
+	for _, path := range paths {
+		_, err := db.Exec(
+			"DELETE FROM playlist_tracks WHERE playlist_id = ? AND track_path = ?",
+			playlistID, path,
+		)
+		if err != nil {
+			return fmt.Errorf("remove %q from playlist %d: %w", path, playlistID, err)
+		}
+	}
+	_, err := db.Exec("UPDATE playlists SET updated = ? WHERE id = ?", now, playlistID)
+	return err
+}
+
+// GetPlaylistTracks returns tracks in a playlist ordered by position.
+func GetPlaylistTracks(db *sql.DB, playlistID int64) ([]TrackRecord, error) {
+	rows, err := db.Query(`
+		SELECT t.path, t.artist, t.album, t.title, t.year, t.genre, t.duration, t.mtime
+		FROM playlist_tracks pt
+		JOIN tracks t ON t.path = pt.track_path
+		WHERE pt.playlist_id = ?
+		ORDER BY pt.position`, playlistID)
+	if err != nil {
+		return nil, fmt.Errorf("get playlist tracks: %w", err)
+	}
+	defer rows.Close()
+
+	var results []TrackRecord
+	for rows.Next() {
+		var t TrackRecord
+		if err := rows.Scan(&t.Path, &t.Artist, &t.Album, &t.Title, &t.Year, &t.Genre, &t.Duration, &t.Mtime); err != nil {
+			return nil, fmt.Errorf("scan track: %w", err)
+		}
+		results = append(results, t)
 	}
 	return results, rows.Err()
 }

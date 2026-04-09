@@ -342,3 +342,132 @@ func TestQueryAlbumsWithYear(t *testing.T) {
 		t.Errorf("Album: got %q want Wonderland", albums[0].Album)
 	}
 }
+
+// --- Task 3: Playlist CRUD ---
+
+func TestPlaylistCRUD(t *testing.T) {
+	db := mustOpenDB(t)
+
+	// create
+	id1, err := CreatePlaylist(db, "Favorites")
+	if err != nil {
+		t.Fatalf("CreatePlaylist: %v", err)
+	}
+	if id1 == 0 {
+		t.Error("expected non-zero ID")
+	}
+
+	id2, err := CreatePlaylist(db, "Workout")
+	if err != nil {
+		t.Fatalf("CreatePlaylist 2: %v", err)
+	}
+
+	// list all
+	playlists, err := ListPlaylists(db, nil)
+	if err != nil {
+		t.Fatalf("ListPlaylists: %v", err)
+	}
+	if len(playlists) != 2 {
+		t.Errorf("expected 2 playlists, got %d", len(playlists))
+	}
+
+	// list with filter
+	playlists, err = ListPlaylists(db, []string{"favor"})
+	if err != nil {
+		t.Fatalf("ListPlaylists filtered: %v", err)
+	}
+	if len(playlists) != 1 {
+		t.Fatalf("expected 1 playlist, got %d", len(playlists))
+	}
+	if playlists[0].Name != "Favorites" {
+		t.Errorf("Name: got %q want Favorites", playlists[0].Name)
+	}
+
+	// rename
+	if err := RenamePlaylist(db, id1, "Best Of"); err != nil {
+		t.Fatalf("RenamePlaylist: %v", err)
+	}
+	playlists, err = ListPlaylists(db, []string{"best"})
+	if err != nil {
+		t.Fatalf("ListPlaylists after rename: %v", err)
+	}
+	if len(playlists) != 1 || playlists[0].Name != "Best Of" {
+		t.Errorf("after rename: %+v", playlists)
+	}
+
+	// delete
+	if err := DeletePlaylist(db, id2); err != nil {
+		t.Fatalf("DeletePlaylist: %v", err)
+	}
+	playlists, err = ListPlaylists(db, nil)
+	if err != nil {
+		t.Fatalf("ListPlaylists after delete: %v", err)
+	}
+	if len(playlists) != 1 {
+		t.Errorf("expected 1 playlist after delete, got %d", len(playlists))
+	}
+}
+
+func TestPlaylistTracks(t *testing.T) {
+	db := mustOpenDB(t)
+	seedTracks(t, db)
+
+	id, err := CreatePlaylist(db, "My Playlist")
+	if err != nil {
+		t.Fatalf("CreatePlaylist: %v", err)
+	}
+
+	paths := []string{"/music/pop1.mp3", "/music/rock1.mp3", "/music/jazz1.mp3"}
+	if err := AddToPlaylist(db, id, paths); err != nil {
+		t.Fatalf("AddToPlaylist: %v", err)
+	}
+
+	tracks, err := GetPlaylistTracks(db, id)
+	if err != nil {
+		t.Fatalf("GetPlaylistTracks: %v", err)
+	}
+	if len(tracks) != 3 {
+		t.Fatalf("expected 3 tracks, got %d", len(tracks))
+	}
+	// verify order matches insertion order (position)
+	if tracks[0].Path != "/music/pop1.mp3" {
+		t.Errorf("track[0] path: got %q want /music/pop1.mp3", tracks[0].Path)
+	}
+	if tracks[1].Path != "/music/rock1.mp3" {
+		t.Errorf("track[1] path: got %q want /music/rock1.mp3", tracks[1].Path)
+	}
+	if tracks[2].Path != "/music/jazz1.mp3" {
+		t.Errorf("track[2] path: got %q want /music/jazz1.mp3", tracks[2].Path)
+	}
+
+	// playlist track count in ListPlaylists
+	playlists, err := ListPlaylists(db, nil)
+	if err != nil {
+		t.Fatalf("ListPlaylists: %v", err)
+	}
+	if len(playlists) != 1 {
+		t.Fatalf("expected 1 playlist, got %d", len(playlists))
+	}
+	if playlists[0].TrackCount != 3 {
+		t.Errorf("TrackCount: got %d want 3", playlists[0].TrackCount)
+	}
+
+	// remove one track
+	if err := RemoveFromPlaylist(db, id, []string{"/music/rock1.mp3"}); err != nil {
+		t.Fatalf("RemoveFromPlaylist: %v", err)
+	}
+	tracks, err = GetPlaylistTracks(db, id)
+	if err != nil {
+		t.Fatalf("GetPlaylistTracks after remove: %v", err)
+	}
+	if len(tracks) != 2 {
+		t.Fatalf("expected 2 tracks after remove, got %d", len(tracks))
+	}
+	// remaining tracks should still be in original position order
+	if tracks[0].Path != "/music/pop1.mp3" {
+		t.Errorf("track[0] after remove: got %q", tracks[0].Path)
+	}
+	if tracks[1].Path != "/music/jazz1.mp3" {
+		t.Errorf("track[1] after remove: got %q", tracks[1].Path)
+	}
+}

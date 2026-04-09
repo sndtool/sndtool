@@ -49,8 +49,10 @@ is independent of the current view — navigating away does not interrupt playba
 - On marked items: queue = marked items in display order.
 
 `A` (shift+a) appends to the existing queue without interrupting playback:
-- Same item selection as `P`, but tracks are added to the end of the queue.
-- If nothing is playing, `A` behaves like `P`.
+- **No marks:** appends all tracks from the current view/query results to the
+  queue. On an album group, appends all tracks in that album.
+- **With marks:** appends only the marked items to the queue.
+- If nothing is playing, `A` starts playback from the first appended track.
 
 ### Auto-Advance
 

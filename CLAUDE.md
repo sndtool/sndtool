@@ -13,12 +13,19 @@ go build -o sndtool .        # build
 ## Project Structure
 
 - `cmd/` — CLI entry point (`main.go`), TUI logic (`tui.go`), self-update (`update.go`)
+- `cmd/db.go` — SQLite database access (open, schema, queries)
+- `cmd/scanner.go` — background scanner that indexes audio files into the DB
+- `cmd/query.go` — library query language parser (`ParseQuery`)
+- `cmd/queue.go` — in-memory play queue management
+- `cmd/tui_library.go` — library view TUI (drill-down, query prompt, results)
+- `cmd/tui_queue.go` — queue view TUI (columnar track list, playback controls)
+- `cmd/tui_playlist.go` — playlist picker TUI (`modePlaylistPicker`)
 - `merge.go` — MP3 merging and auto-tagging logic
 - `scripts/` — helper scripts (changelog, etc.)
 
 ## Stack
 
-- Go, Bubble Tea (TUI), Lip Gloss (styling), id3v2 (tags), mp3lib (frame-level MP3)
+- Go, Bubble Tea (TUI), Lip Gloss (styling), id3v2 (tags), mp3lib (frame-level MP3), SQLite (modernc.org/sqlite)
 
 ## TUI Keybindings
 
@@ -64,7 +71,8 @@ go build -o sndtool .        # build
 | `space` | Mark/unmark |
 | `P` | Play track or drill into group |
 | `A` | Append to queue (marked items or current) |
-| `a` | Add to playlist (placeholder) |
+| `a` | Add to playlist |
+| `d` | Delete playlist / remove track from playlist |
 | `S` | Pause/resume playback |
 | `Shift+←/→` | Seek backward/forward 10s |
 | `Shift+↑/↓` | Previous/next song |
@@ -83,9 +91,13 @@ After any code changes, update these files to stay in sync:
 
 ## Conventions
 
-- TUI modes: `modeBrowse`, `modeDetail`, `modeEdit`, `modeEditDir`, `modeConfirm`, `modeRename`, `modeFind`
+- TUI modes: `modeBrowse`, `modeDetail`, `modeEdit`, `modeEditDir`, `modeConfirm`, `modeRename`, `modeFind`, `modePlaylistPicker`
+- Three view modes: `viewFiles`, `viewLibrary`, `viewQueue` — cycled with `v`
 - Don't change an existing key binding without explicitly confirming with the user first
 - File operations use `getMarkedOrCurrent()` to work on marked items or cursor item
 - Clipboard is an in-memory `[]string` of file paths; `clipboardCut` flag distinguishes copy vs cut
 - Cut (`x`) marks files for move without deleting; paste (`p`) uses `os.Rename` (with cross-device fallback)
 - Delete always requires confirmation via `modeConfirm`
+- Library uses query language parsed by `ParseQuery` in `cmd/query.go`; query syntax: `[view] [terms...] [field:value...]`
+- Play queue is in-memory (managed in `cmd/queue.go`), drives auto-advance; `P` replaces queue, `A` appends
+- Database: `sndtool.db` (SQLite) in the target directory stores track metadata and playlists; background scanner (`cmd/scanner.go`) keeps it in sync

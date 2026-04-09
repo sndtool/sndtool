@@ -8,6 +8,14 @@
 - TUI: flash only the speaker emoji instead of the entire line during playback
 - TUI: queue view — columnar track list with 🔊 playing indicator, cursor navigation (j/k), space-to-mark, d-to-remove, P-to-jump-to-play
 - TUI: startup flow — detects `sndtool.db` in target directory; if absent, prompts "Create library database? (y/n)"; opens/creates DB, runs background scanner on init
+- Library mode: SQLite-backed browsing by artist, album, year, genre, playlist
+- Library mode: command-driven query language with tab completion
+- Library mode: mixed search across artists, albums, and tracks
+- Play queue: independent playback queue persists across view changes
+- Play queue: P replaces queue, A appends, Shift+Up/Down navigates queue
+- Playlists: create, rename, delete; add/remove tracks
+- Three view modes: Files, Library, Queue — cycle with v
+- Background scanner keeps library database in sync with files on disk
 
 ## v0.1.2 (2026-04-08)
 

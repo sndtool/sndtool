@@ -127,6 +127,8 @@ directory (defaults to current directory) as well a file management operations.
 | `S`              | Pause/resume playback                      |
 | `Shift+←`/`→`   | Seek backward/forward 10 seconds           |
 | `Shift+↑`/`↓`   | Previous/next song                         |
+| `A`              | Append tracks to play queue                |
+| `v`              | Cycle view mode (Files/Library/Queue)      |
 | `+`/`-`          | Volume up/down                             |
 | `PgDn`/`Ctrl-f`  | Page down                                  |
 | `PgUp`/`Ctrl-b`  | Page up                                    |

@@ -45,6 +45,8 @@ go build -o sndtool .        # build
 | `S` | Pause/resume playback |
 | `Shift+←/→` | Seek backward/forward 10s |
 | `Shift+↑/↓` | Previous/next song |
+| `A` | Append tracks to play queue |
+| `v` | Cycle view mode (Files/Library/Queue) |
 | `+`/`-` | Volume up/down |
 | `pgdn`/`ctrl-f` | Page down |
 | `pgup`/`ctrl-b` | Page up |

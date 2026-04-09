@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"database/sql"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -30,6 +31,12 @@ const (
 	modeSearch     = "search"
 	modeFind       = "find"
 	modeMpvMissing = "mpvmissing"
+)
+
+const (
+	viewFiles   = "files"
+	viewLibrary = "library"
+	viewQueue   = "queue"
 )
 
 type tagEntry struct {
@@ -81,6 +88,16 @@ type tagsModel struct {
 	findTitle  string // header title for find view
 	findActive bool   // true when displaying find results in browse view
 	returnMode string // mode to return to after edit (modeBrowse or modeFind)
+
+	// View mode
+	viewMode string // viewFiles, viewLibrary, viewQueue
+	hasDB    bool   // true if sndtool.db is available
+
+	// Play queue
+	queue *PlayQueue
+
+	// Database
+	db *sql.DB
 
 	// Navigation history
 	startDir string   // directory where TUI was launched
@@ -166,25 +183,8 @@ func (m tagsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tickCmd(m.playGen)
 
 	case playDoneMsg:
-		// Ignore stale messages from a killed mpv process
-		if msg.gen != m.playGen {
+		if msg.gen != m.playGen || m.playingPath == "" {
 			return m, nil
-		}
-		// Find the next non-directory file, wrapping around to the beginning
-		nextIdx := -1
-		curIdx := 0
-		for i, e := range m.entries {
-			if e.path == m.playingPath {
-				curIdx = i
-				break
-			}
-		}
-		for offset := 1; offset < len(m.entries); offset++ {
-			j := (curIdx + offset) % len(m.entries)
-			if !m.entries[j].isDir && isPlayable(m.entries[j].path) {
-				nextIdx = j
-				break
-			}
 		}
 		if m.mpvSocket != "" {
 			os.Remove(m.mpvSocket)
@@ -196,11 +196,13 @@ func (m tagsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.mpvSocket = ""
 		m.playPosition = 0
 		m.playDuration = 0
-		if nextIdx >= 0 {
-			m.cursor = nextIdx
-			m = m.clampScroll()
-			return m.startPlayback(m.entries[nextIdx].path)
+
+		if m.queue.Advance() {
+			track := m.queue.Current()
+			return m.startPlayback(track.Path)
 		}
+		// Queue exhausted
+		m.stopPlayback()
 		m.statusMsg = "Playback finished"
 
 	case tea.KeyMsg:
@@ -210,6 +212,15 @@ func (m tagsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.stopPlayback()
 			m.quitting = true
 			return m, tea.Quit
+		}
+		// View mode routing when in browse mode
+		if m.mode == modeBrowse || m.mode == "" {
+			switch m.viewMode {
+			case viewLibrary:
+				return m.updateLibrary(msg)
+			case viewQueue:
+				return m.updateQueue(msg)
+			}
 		}
 		switch m.mode {
 		case modeDetail:
@@ -545,18 +556,87 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.editCursor = 0
 		}
 
+	case "v":
+		switch m.viewMode {
+		case viewFiles:
+			if m.hasDB {
+				m.viewMode = viewLibrary
+			} else {
+				m.viewMode = viewQueue
+			}
+		case viewLibrary:
+			m.viewMode = viewQueue
+		case viewQueue:
+			m.viewMode = viewFiles
+		}
+		return m, nil
+
 	case "/":
 		m.mode = modeSearch
 		m.searchInput = []rune(m.searchQuery)
 		m.searchPos = len(m.searchInput)
 
 	case "P":
-		if len(m.entries) > 0 {
-			e := m.entries[m.cursor]
-			if !e.isDir {
-				return m.startPlayback(e.path)
+		if len(m.entries) == 0 {
+			return m, nil
+		}
+		e := m.entries[m.cursor]
+		if e.isDir || !isPlayable(e.path) {
+			return m, nil
+		}
+		// Build queue from current context
+		var tracks []QueueTrack
+		startIdx := 0
+		for _, entry := range m.entries {
+			if entry.isDir || !isPlayable(entry.path) {
+				continue
+			}
+			if entry.path == e.path {
+				startIdx = len(tracks)
+			}
+			tracks = append(tracks, QueueTrack{
+				Path: entry.path, Artist: entry.artist,
+				Album: entry.album, Title: entry.title,
+				Year: entry.year,
+			})
+		}
+		m.queue.Replace(tracks, startIdx)
+		return m.startPlayback(e.path)
+
+	case "A":
+		var tracks []QueueTrack
+		if m.marked != nil && len(m.marked) > 0 {
+			for i, entry := range m.entries {
+				if m.marked[i] && !entry.isDir && isPlayable(entry.path) {
+					tracks = append(tracks, QueueTrack{
+						Path: entry.path, Artist: entry.artist,
+						Album: entry.album, Title: entry.title,
+						Year: entry.year,
+					})
+				}
+			}
+		} else {
+			for _, entry := range m.entries {
+				if !entry.isDir && isPlayable(entry.path) {
+					tracks = append(tracks, QueueTrack{
+						Path: entry.path, Artist: entry.artist,
+						Album: entry.album, Title: entry.title,
+						Year: entry.year,
+					})
+				}
 			}
 		}
+		if len(tracks) == 0 {
+			return m, nil
+		}
+		wasEmpty := m.queue.Len() == 0
+		m.queue.Append(tracks)
+		m.statusMsg = fmt.Sprintf("Added %d track(s) to queue", len(tracks))
+		if wasEmpty {
+			track := m.queue.Current()
+			return m.startPlayback(track.Path)
+		}
+		return m, nil
 
 	case "S":
 		if m.playCmd != nil && m.mpvSocket != "" {
@@ -575,25 +655,12 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 	case "shift+up":
-		if m.playCmd != nil {
-			curIdx := -1
-			for i, e := range m.entries {
-				if e.path == m.playingPath {
-					curIdx = i
-					break
-				}
-			}
-			if curIdx >= 0 && len(m.entries) > 1 {
-				for offset := 1; offset < len(m.entries); offset++ {
-					j := (curIdx - offset + len(m.entries)) % len(m.entries)
-					if j != curIdx && !m.entries[j].isDir && isPlayable(m.entries[j].path) {
-						m.cursor = j
-						m = m.clampScroll()
-						return m.startPlayback(m.entries[j].path)
-					}
-				}
-			}
+		if m.queue.CurrentIndex() > 0 {
+			m.queue.JumpTo(m.queue.CurrentIndex() - 1)
+			track := m.queue.Current()
+			return m.startPlayback(track.Path)
 		}
+		return m, nil
 
 	case "+", "=":
 		if m.playCmd != nil && m.mpvSocket != "" {
@@ -606,25 +673,12 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 	case "shift+down":
-		if m.playCmd != nil {
-			curIdx := -1
-			for i, e := range m.entries {
-				if e.path == m.playingPath {
-					curIdx = i
-					break
-				}
-			}
-			if curIdx >= 0 && len(m.entries) > 1 {
-				for offset := 1; offset < len(m.entries); offset++ {
-					j := (curIdx + offset) % len(m.entries)
-					if j != curIdx && !m.entries[j].isDir && isPlayable(m.entries[j].path) {
-						m.cursor = j
-						m = m.clampScroll()
-						return m.startPlayback(m.entries[j].path)
-					}
-				}
-			}
+		if m.queue.CurrentIndex()+1 < m.queue.Len() {
+			m.queue.JumpTo(m.queue.CurrentIndex() + 1)
+			track := m.queue.Current()
+			return m.startPlayback(track.Path)
 		}
+		return m, nil
 
 	case "Q":
 		m.findActive = true
@@ -641,6 +695,42 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.offset = 0
 		m.marked = nil
 
+	}
+	return m, nil
+}
+
+// --- Library view mode (stub) ---
+
+func (m tagsModel) updateLibrary(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "v":
+			m.viewMode = viewQueue
+			return m, nil
+		case "q":
+			m.quitting = true
+			m.stopPlayback()
+			return m, tea.Quit
+		}
+	}
+	return m, nil
+}
+
+// --- Queue view mode (stub) ---
+
+func (m tagsModel) updateQueue(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "v":
+			m.viewMode = viewFiles
+			return m, nil
+		case "q":
+			m.quitting = true
+			m.stopPlayback()
+			return m, tea.Quit
+		}
 	}
 	return m, nil
 }
@@ -1812,6 +1902,15 @@ func (m tagsModel) View() string {
 	if m.quitting {
 		return ""
 	}
+	// Route to view-mode stubs when in browse mode
+	if m.mode == modeBrowse || m.mode == "" {
+		switch m.viewMode {
+		case viewLibrary:
+			return m.viewLibraryStub()
+		case viewQueue:
+			return m.viewQueueStub()
+		}
+	}
 	switch m.mode {
 	case modeDetail:
 		return m.viewDetail()
@@ -1832,15 +1931,26 @@ func (m tagsModel) View() string {
 	}
 }
 
+func (m tagsModel) viewLibraryStub() string {
+	return headerStyle.Render("  sndtool") + dimStyle.Render("  [Library]") + "\n\n" +
+		dimStyle.Render("  Library mode — not yet implemented. Press v to switch.") + "\n"
+}
+
+func (m tagsModel) viewQueueStub() string {
+	return headerStyle.Render("  sndtool") + dimStyle.Render("  [Queue]") + "\n\n" +
+		dimStyle.Render("  Queue is empty. Press P on a track to start playing.") + "\n"
+}
+
 func (m tagsModel) viewBrowse() string {
 	var b strings.Builder
+	modeLabel := " [Files]"
 	if m.findActive {
-		b.WriteString(headerStyle.Render("sndtool — "+m.findTitle) + "\n")
-		b.WriteString(dimStyle.Render("j/k: nav  e: edit  enter: go to  esc: back  P: play") + "\n\n")
+		b.WriteString(headerStyle.Render("sndtool — "+m.findTitle) + dimStyle.Render(modeLabel) + "\n")
+		b.WriteString(dimStyle.Render("j/k: nav  e: edit  enter: go to  esc: back  P: play  v: view") + "\n\n")
 	} else {
-		b.WriteString(headerStyle.Render("sndtool tags — "+m.dir) + "\n")
+		b.WriteString(headerStyle.Render("sndtool tags — "+m.dir) + dimStyle.Render(modeLabel) + "\n")
 		helpKeys := "j/k: nav  enter: open  e: edit  r: rename  d: del  /: filter  space: mark  c/x/p: copy/cut/paste\n" +
-			"f: find  Q: quality  b: back  ~: home  m: merge  P: play  S: pause  ⇧←→: seek  ⇧↑↓: prev/next  +/-: vol  q: quit"
+			"f: find  Q: quality  b: back  ~: home  m: merge  P: play  S: pause  ⇧←→: seek  ⇧↑↓: prev/next  +/-: vol  v: view  q: quit"
 		b.WriteString(dimStyle.Render(helpKeys) + "\n\n")
 	}
 
@@ -2229,7 +2339,7 @@ func runTUI(args []string) error {
 		abs = dir
 	}
 
-	m := tagsModel{dir: abs, allEntries: entries, entries: entries, startDir: abs}
+	m := tagsModel{dir: abs, allEntries: entries, entries: entries, startDir: abs, viewMode: viewFiles, queue: &PlayQueue{}}
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	_, err = p.Run()
 	return err

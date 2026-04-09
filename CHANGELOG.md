@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- TUI: three view modes (Files/Library/Queue) — cycle with `v` key
+- TUI: play queue integration — `P` builds queue from visible entries, `A` appends to queue, Shift+Up/Down navigate queue, auto-advance uses queue
 - TUI: flash only the speaker emoji instead of the entire line during playback
 
 ## v0.1.2 (2026-04-08)

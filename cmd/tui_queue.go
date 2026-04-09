@@ -28,9 +28,7 @@ func (m tagsModel) updateQueue(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch keyMsg.String() {
 	case "q":
 		m.stopPlayback()
-		if m.db != nil {
-			m.db.Close()
-		}
+		m.saveAndCloseDB()
 		m.quitting = true
 		return m, tea.Quit
 

@@ -100,7 +100,8 @@ type tagsModel struct {
 	queueMarked  map[int]bool // marked tracks in queue view
 
 	// Database
-	db *sql.DB
+	db       *sql.DB
+	username string // OS username for per-user state
 
 	// Library mode state
 	libQuery       string     // committed query text
@@ -270,7 +271,7 @@ func (m tagsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "ctrl+c" {
 			m.stopPlayback()
 			if m.db != nil {
-				m.db.Close()
+				m.saveAndCloseDB()
 			}
 			m.quitting = true
 			return m, tea.Quit
@@ -337,17 +338,13 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.stopPlayback()
-		if m.db != nil {
-			m.db.Close()
-		}
+		m.saveAndCloseDB()
 		m.quitting = true
 		return m, tea.Quit
 
 	case "q":
 		m.stopPlayback()
-		if m.db != nil {
-			m.db.Close()
-		}
+		m.saveAndCloseDB()
 		m.quitting = true
 		return m, tea.Quit
 
@@ -1780,6 +1777,20 @@ func (m *tagsModel) stopPlayback() {
 	m.playDuration = 0
 }
 
+func (m *tagsModel) saveAndCloseDB() {
+	if m.db == nil {
+		return
+	}
+	SaveUserState(m.db, m.username, UserState{
+		Volume:       m.playVolume,
+		QueueIndex:   m.queue.CurrentIndex(),
+		PlayPosition: m.playPosition,
+		Queue:        m.queue.Tracks(),
+	})
+	m.saveAndCloseDB()
+	m.db = nil
+}
+
 func (m tagsModel) startPlayback(path string) (tea.Model, tea.Cmd) {
 	m.stopPlayback()
 
@@ -2414,6 +2425,29 @@ func runTUI(args []string) error {
 		}
 	}
 
+	// Detect OS username for per-user state
+	currentUser := os.Getenv("USER")
+	if currentUser == "" {
+		currentUser = os.Getenv("USERNAME") // Windows fallback
+	}
+	if currentUser == "" {
+		currentUser = "default"
+	}
+
+	queue := &PlayQueue{}
+	var playVolume float64
+
+	// Restore user state from DB
+	if db != nil {
+		state, err := LoadUserState(db, currentUser)
+		if err == nil {
+			playVolume = state.Volume
+			if len(state.Queue) > 0 {
+				queue.Replace(state.Queue, state.QueueIndex)
+			}
+		}
+	}
+
 	m := tagsModel{
 		dir:        abs,
 		allEntries: entries,
@@ -2422,7 +2456,9 @@ func runTUI(args []string) error {
 		viewMode:   initialViewMode,
 		hasDB:      db != nil,
 		db:         db,
-		queue:      &PlayQueue{},
+		queue:      queue,
+		username:   currentUser,
+		playVolume: playVolume,
 	}
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	_, err = p.Run()

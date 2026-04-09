@@ -39,6 +39,25 @@ CREATE INDEX IF NOT EXISTS idx_tracks_artist ON tracks(artist);
 CREATE INDEX IF NOT EXISTS idx_tracks_album ON tracks(album);
 CREATE INDEX IF NOT EXISTS idx_tracks_year ON tracks(year);
 CREATE INDEX IF NOT EXISTS idx_tracks_genre ON tracks(genre);
+
+CREATE TABLE IF NOT EXISTS user_state (
+    username      TEXT PRIMARY KEY,
+    volume        REAL NOT NULL DEFAULT 100,
+    queue_index   INTEGER NOT NULL DEFAULT 0,
+    play_position REAL NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS user_queue (
+    username  TEXT NOT NULL REFERENCES user_state(username) ON DELETE CASCADE,
+    position  INTEGER NOT NULL,
+    path      TEXT NOT NULL,
+    artist    TEXT NOT NULL DEFAULT '',
+    album     TEXT NOT NULL DEFAULT '',
+    title     TEXT NOT NULL DEFAULT '',
+    year      TEXT NOT NULL DEFAULT '',
+    duration  REAL NOT NULL DEFAULT 0,
+    PRIMARY KEY (username, position)
+);
 `
 
 // OpenDB opens (or creates) a SQLite database at dsn, enables foreign keys,
@@ -513,4 +532,80 @@ func GetPlaylistTracks(db *sql.DB, playlistID int64) ([]TrackRecord, error) {
 		results = append(results, t)
 	}
 	return results, rows.Err()
+}
+
+// --- User state persistence ---
+
+type UserState struct {
+	Volume       float64
+	QueueIndex   int
+	PlayPosition float64
+	Queue        []QueueTrack
+}
+
+func SaveUserState(db *sql.DB, username string, state UserState) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec(`
+		INSERT INTO user_state (username, volume, queue_index, play_position)
+		VALUES (?, ?, ?, ?)
+		ON CONFLICT(username) DO UPDATE SET
+			volume=excluded.volume, queue_index=excluded.queue_index,
+			play_position=excluded.play_position`,
+		username, state.Volume, state.QueueIndex, state.PlayPosition)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM user_queue WHERE username=?", username)
+	if err != nil {
+		return err
+	}
+
+	for i, t := range state.Queue {
+		_, err = tx.Exec(`
+			INSERT INTO user_queue (username, position, path, artist, album, title, year, duration)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			username, i, t.Path, t.Artist, t.Album, t.Title, t.Year, t.Duration)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+func LoadUserState(db *sql.DB, username string) (UserState, error) {
+	var state UserState
+	err := db.QueryRow(
+		"SELECT volume, queue_index, play_position FROM user_state WHERE username=?",
+		username).Scan(&state.Volume, &state.QueueIndex, &state.PlayPosition)
+	if err == sql.ErrNoRows {
+		return UserState{Volume: 100}, nil
+	}
+	if err != nil {
+		return state, err
+	}
+
+	rows, err := db.Query(
+		`SELECT path, artist, album, title, year, duration
+		FROM user_queue WHERE username=? ORDER BY position`, username)
+	if err != nil {
+		return state, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var t QueueTrack
+		if err := rows.Scan(&t.Path, &t.Artist, &t.Album, &t.Title, &t.Year, &t.Duration); err != nil {
+			return state, err
+		}
+		state.Queue = append(state.Queue, t)
+	}
+
+	return state, rows.Err()
 }

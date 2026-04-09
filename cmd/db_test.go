@@ -471,3 +471,68 @@ func TestPlaylistTracks(t *testing.T) {
 		t.Errorf("track[1] after remove: got %q", tracks[1].Path)
 	}
 }
+
+func TestUserState_SaveAndLoad(t *testing.T) {
+	db, _ := OpenDB(":memory:")
+	defer db.Close()
+
+	state := UserState{
+		Volume:       75.0,
+		QueueIndex:   2,
+		PlayPosition: 42.5,
+		Queue: []QueueTrack{
+			{Path: "/a.mp3", Artist: "Smith", Album: "A1", Title: "T1", Year: "2024", Duration: 120},
+			{Path: "/b.mp3", Artist: "Jones", Album: "A2", Title: "T2", Year: "2025", Duration: 90},
+			{Path: "/c.mp3", Artist: "Smith", Album: "A1", Title: "T3", Year: "2024", Duration: 60},
+		},
+	}
+
+	if err := SaveUserState(db, "testuser", state); err != nil {
+		t.Fatalf("SaveUserState: %v", err)
+	}
+
+	got, err := LoadUserState(db, "testuser")
+	if err != nil {
+		t.Fatalf("LoadUserState: %v", err)
+	}
+
+	if got.Volume != 75.0 {
+		t.Errorf("Volume: got %f, want 75.0", got.Volume)
+	}
+	if got.QueueIndex != 2 {
+		t.Errorf("QueueIndex: got %d, want 2", got.QueueIndex)
+	}
+	if got.PlayPosition != 42.5 {
+		t.Errorf("PlayPosition: got %f, want 42.5", got.PlayPosition)
+	}
+	if len(got.Queue) != 3 {
+		t.Fatalf("Queue length: got %d, want 3", len(got.Queue))
+	}
+	if got.Queue[0].Path != "/a.mp3" || got.Queue[2].Artist != "Smith" {
+		t.Errorf("Queue data mismatch")
+	}
+
+	// Load for unknown user returns defaults
+	unknown, err := LoadUserState(db, "nobody")
+	if err != nil {
+		t.Fatalf("LoadUserState unknown: %v", err)
+	}
+	if unknown.Volume != 100 {
+		t.Errorf("default Volume: got %f, want 100", unknown.Volume)
+	}
+	if len(unknown.Queue) != 0 {
+		t.Errorf("default Queue: got %d, want 0", len(unknown.Queue))
+	}
+
+	// Update overwrites
+	state.Volume = 50
+	state.Queue = state.Queue[:1]
+	SaveUserState(db, "testuser", state)
+	got2, _ := LoadUserState(db, "testuser")
+	if got2.Volume != 50 {
+		t.Errorf("updated Volume: got %f, want 50", got2.Volume)
+	}
+	if len(got2.Queue) != 1 {
+		t.Errorf("updated Queue: got %d, want 1", len(got2.Queue))
+	}
+}

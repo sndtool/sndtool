@@ -75,6 +75,12 @@ func (m tagsModel) updateLibraryEditing(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.libEditing = false
 		m.libCompletions = nil
 		m.libCompIdx = -1
+		// Add to history if non-empty and different from last entry
+		q := strings.TrimSpace(m.libQuery)
+		if q != "" && (len(m.libHistory) == 0 || m.libHistory[len(m.libHistory)-1] != q) {
+			m.libHistory = append(m.libHistory, q)
+		}
+		m.libHistoryIdx = -1
 		m.executeLibraryQuery()
 		return m, nil
 
@@ -125,6 +131,14 @@ func (m tagsModel) updateLibraryEditing(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			} else {
 				m.libCompIdx = len(m.libCompletions) - 1
 			}
+		} else if len(m.libHistory) > 0 {
+			if m.libHistoryIdx < 0 {
+				m.libHistoryIdx = len(m.libHistory) - 1
+			} else if m.libHistoryIdx > 0 {
+				m.libHistoryIdx--
+			}
+			m.libQueryInput = []rune(m.libHistory[m.libHistoryIdx])
+			m.libQueryPos = len(m.libQueryInput)
 		}
 		return m, nil
 
@@ -134,6 +148,17 @@ func (m tagsModel) updateLibraryEditing(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.libCompIdx++
 			} else {
 				m.libCompIdx = 0
+			}
+		} else if m.libHistoryIdx >= 0 {
+			if m.libHistoryIdx < len(m.libHistory)-1 {
+				m.libHistoryIdx++
+				m.libQueryInput = []rune(m.libHistory[m.libHistoryIdx])
+				m.libQueryPos = len(m.libQueryInput)
+			} else {
+				// Past end of history — clear to empty
+				m.libHistoryIdx = -1
+				m.libQueryInput = nil
+				m.libQueryPos = 0
 			}
 		}
 		return m, nil
@@ -171,6 +196,7 @@ func (m tagsModel) updateLibraryBrowsing(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.libEditing = true
 		m.libQueryInput = []rune(m.libQuery)
 		m.libQueryPos = len(m.libQueryInput)
+		m.libHistoryIdx = -1
 		return m, nil
 
 	case "up", "k":

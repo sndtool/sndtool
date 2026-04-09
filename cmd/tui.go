@@ -113,6 +113,8 @@ type tagsModel struct {
 	libDrillStack  []libDrill // breadcrumb stack for drill-down
 	libCompletions []string   // tab completion suggestions
 	libCompIdx     int        // selected completion (-1 = none)
+	libHistory     []string   // command history (oldest first)
+	libHistoryIdx  int        // current position in history (-1 = not browsing)
 
 	// Navigation history
 	startDir string   // directory where TUI was launched

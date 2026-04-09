@@ -57,8 +57,7 @@ func sendKey(m tagsModel, key string) tagsModel {
 
 // TestModeCycling verifies that 'v' in Files→Library (when DB present), and 'v' in Library→Files.
 // Note: Library 'v' is context-aware (navigates to file view), Queue 'v' also goes to Files.
-// The full Files→Library→Queue→Files cycle is not available via a single key from each view;
-// instead from updateBrowse (viewFiles), 'v' goes Files→Library→Queue→Files in sequence.
+// v cycles Files→Library→Queue→Files
 func TestModeCycling(t *testing.T) {
 	m := newTestModel(t)
 
@@ -66,22 +65,22 @@ func TestModeCycling(t *testing.T) {
 		t.Fatalf("initial viewMode = %q, want %q", m.viewMode, viewFiles)
 	}
 
-	// Files → Library (updateBrowse handles this)
+	// Files → Library
 	m = sendKey(m, "v")
 	if m.viewMode != viewLibrary {
 		t.Errorf("after 1st v: viewMode = %q, want %q", m.viewMode, viewLibrary)
 	}
 
-	// Library → Files (updateLibraryBrowsing handles this — context-aware navigation)
+	// Library → Queue
 	m = sendKey(m, "v")
-	if m.viewMode != viewFiles {
-		t.Errorf("after 2nd v from library: viewMode = %q, want %q", m.viewMode, viewFiles)
+	if m.viewMode != viewQueue {
+		t.Errorf("after 2nd v: viewMode = %q, want %q", m.viewMode, viewQueue)
 	}
 
-	// Files → Library again
+	// Queue → Files
 	m = sendKey(m, "v")
-	if m.viewMode != viewLibrary {
-		t.Errorf("after 3rd v: viewMode = %q, want %q", m.viewMode, viewLibrary)
+	if m.viewMode != viewFiles {
+		t.Errorf("after 3rd v: viewMode = %q, want %q", m.viewMode, viewFiles)
 	}
 }
 

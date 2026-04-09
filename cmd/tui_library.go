@@ -266,11 +266,52 @@ func (m tagsModel) updateLibraryBrowsing(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		entry := m.libResults[m.libCursor]
-		if entry.entryType == libEntryTrack {
+		switch entry.entryType {
+		case libEntryTrack:
 			return m.libPlayTrack(m.libCursor)
+		case libEntryAlbum:
+			// Fetch album tracks and play
+			tracks, err := QueryTracks(m.db, nil, map[string][]string{"album": {entry.album}})
+			if err == nil && len(tracks) > 0 {
+				var qt []QueueTrack
+				for _, t := range tracks {
+					qt = append(qt, QueueTrack{
+						Path: t.Path, Artist: t.Artist, Album: t.Album,
+						Title: t.Title, Year: t.Year, Duration: t.Duration,
+					})
+				}
+				m.queue.Replace(qt, 0)
+				return m.startPlayback(qt[0].Path)
+			}
+		case libEntryPlaylist:
+			// Fetch playlist tracks and play
+			tracks, err := GetPlaylistTracks(m.db, entry.playlistID)
+			if err == nil && len(tracks) > 0 {
+				var qt []QueueTrack
+				for _, t := range tracks {
+					qt = append(qt, QueueTrack{
+						Path: t.Path, Artist: t.Artist, Album: t.Album,
+						Title: t.Title, Year: t.Year, Duration: t.Duration,
+					})
+				}
+				m.queue.Replace(qt, 0)
+				return m.startPlayback(qt[0].Path)
+			}
+		case libEntryArtist:
+			// Fetch all artist tracks and play
+			tracks, err := QueryTracks(m.db, nil, map[string][]string{"artist": {entry.artist}})
+			if err == nil && len(tracks) > 0 {
+				var qt []QueueTrack
+				for _, t := range tracks {
+					qt = append(qt, QueueTrack{
+						Path: t.Path, Artist: t.Artist, Album: t.Album,
+						Title: t.Title, Year: t.Year, Duration: t.Duration,
+					})
+				}
+				m.queue.Replace(qt, 0)
+				return m.startPlayback(qt[0].Path)
+			}
 		}
-		// For groups, drill in
-		m.libDrillInto(entry)
 		return m, nil
 
 	case "A":

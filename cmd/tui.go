@@ -94,7 +94,10 @@ type tagsModel struct {
 	hasDB    bool   // true if sndtool.db is available
 
 	// Play queue
-	queue *PlayQueue
+	queue        *PlayQueue
+	queueCursor  int          // cursor position in queue view
+	queueOffset  int          // scroll offset in queue view
+	queueMarked  map[int]bool // marked tracks in queue view
 
 	// Database
 	db *sql.DB
@@ -130,7 +133,22 @@ func tickCmd(gen int) tea.Cmd {
 }
 
 func (m tagsModel) Init() tea.Cmd {
+	if m.db != nil {
+		return m.scanCmd()
+	}
 	return nil
+}
+
+// scanDoneMsg is sent when the background scanner finishes.
+type scanDoneMsg struct{ stats ScanStats }
+
+func (m tagsModel) scanCmd() tea.Cmd {
+	db := m.db
+	dir := m.startDir
+	return func() tea.Msg {
+		stats, _ := ScanDir(db, dir)
+		return scanDoneMsg{stats: stats}
+	}
 }
 
 // visibleRows returns how many list rows fit on screen (minus header/footer lines).
@@ -205,11 +223,19 @@ func (m tagsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.stopPlayback()
 		m.statusMsg = "Playback finished"
 
+	case scanDoneMsg:
+		m.statusMsg = fmt.Sprintf("Scan: %d added, %d updated, %d removed",
+			msg.stats.Added, msg.stats.Updated, msg.stats.Deleted)
+		return m, nil
+
 	case tea.KeyMsg:
 		m.statusMsg = ""
 		// ctrl+c always quits
 		if msg.String() == "ctrl+c" {
 			m.stopPlayback()
+			if m.db != nil {
+				m.db.Close()
+			}
 			m.quitting = true
 			return m, tea.Quit
 		}
@@ -273,11 +299,17 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.stopPlayback()
+		if m.db != nil {
+			m.db.Close()
+		}
 		m.quitting = true
 		return m, tea.Quit
 
 	case "q":
 		m.stopPlayback()
+		if m.db != nil {
+			m.db.Close()
+		}
 		m.quitting = true
 		return m, tea.Quit
 
@@ -709,26 +741,11 @@ func (m tagsModel) updateLibrary(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewMode = viewQueue
 			return m, nil
 		case "q":
-			m.quitting = true
 			m.stopPlayback()
-			return m, tea.Quit
-		}
-	}
-	return m, nil
-}
-
-// --- Queue view mode (stub) ---
-
-func (m tagsModel) updateQueue(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "v":
-			m.viewMode = viewFiles
-			return m, nil
-		case "q":
+			if m.db != nil {
+				m.db.Close()
+			}
 			m.quitting = true
-			m.stopPlayback()
 			return m, tea.Quit
 		}
 	}
@@ -1902,13 +1919,13 @@ func (m tagsModel) View() string {
 	if m.quitting {
 		return ""
 	}
-	// Route to view-mode stubs when in browse mode
+	// Route to view-mode renderers when in browse mode
 	if m.mode == modeBrowse || m.mode == "" {
 		switch m.viewMode {
 		case viewLibrary:
 			return m.viewLibraryStub()
 		case viewQueue:
-			return m.viewQueueStub()
+			return m.viewQueue()
 		}
 	}
 	switch m.mode {
@@ -1934,11 +1951,6 @@ func (m tagsModel) View() string {
 func (m tagsModel) viewLibraryStub() string {
 	return headerStyle.Render("  sndtool") + dimStyle.Render("  [Library]") + "\n\n" +
 		dimStyle.Render("  Library mode — not yet implemented. Press v to switch.") + "\n"
-}
-
-func (m tagsModel) viewQueueStub() string {
-	return headerStyle.Render("  sndtool") + dimStyle.Render("  [Queue]") + "\n\n" +
-		dimStyle.Render("  Queue is empty. Press P on a track to start playing.") + "\n"
 }
 
 func (m tagsModel) viewBrowse() string {
@@ -2329,17 +2341,50 @@ func runTUI(args []string) error {
 		return err
 	}
 
-	if len(entries) == 0 {
-		fmt.Println("No audio files found.")
-		return nil
-	}
-
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		abs = dir
 	}
 
-	m := tagsModel{dir: abs, allEntries: entries, entries: entries, startDir: abs, viewMode: viewFiles, queue: &PlayQueue{}}
+	// DB detection and startup prompt (must happen before tea.NewProgram takes over the terminal).
+	var db *sql.DB
+	initialViewMode := viewFiles
+	dbPath := filepath.Join(abs, "sndtool.db")
+
+	if _, statErr := os.Stat(dbPath); statErr == nil {
+		// DB already exists — open it.
+		db, err = OpenDB(dbPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not open sndtool.db: %v\n", err)
+		} else {
+			initialViewMode = viewLibrary
+		}
+	} else {
+		// No DB — ask user whether to create one.
+		fmt.Print("Create library database? (y/n) ")
+		var answer string
+		fmt.Scanln(&answer)
+		answer = strings.ToLower(strings.TrimSpace(answer))
+		if answer == "y" || answer == "yes" {
+			db, err = OpenDB(dbPath)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: could not create sndtool.db: %v\n", err)
+			} else {
+				initialViewMode = viewLibrary
+			}
+		}
+	}
+
+	m := tagsModel{
+		dir:        abs,
+		allEntries: entries,
+		entries:    entries,
+		startDir:   abs,
+		viewMode:   initialViewMode,
+		hasDB:      db != nil,
+		db:         db,
+		queue:      &PlayQueue{},
+	}
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	_, err = p.Run()
 	return err

@@ -102,6 +102,18 @@ type tagsModel struct {
 	// Database
 	db *sql.DB
 
+	// Library mode state
+	libQuery       string     // committed query text
+	libQueryInput  []rune     // query input buffer while editing
+	libQueryPos    int        // cursor position in query input
+	libEditing     bool       // true when : prompt is active
+	libResults     []libEntry // current display results
+	libCursor      int        // cursor in results
+	libOffset      int        // scroll offset
+	libDrillStack  []libDrill // breadcrumb stack for drill-down
+	libCompletions []string   // tab completion suggestions
+	libCompIdx     int        // selected completion (-1 = none)
+
 	// Navigation history
 	startDir string   // directory where TUI was launched
 	dirStack []string // previous directories for 'b' key
@@ -727,27 +739,6 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.offset = 0
 		m.marked = nil
 
-	}
-	return m, nil
-}
-
-// --- Library view mode (stub) ---
-
-func (m tagsModel) updateLibrary(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "v":
-			m.viewMode = viewQueue
-			return m, nil
-		case "q":
-			m.stopPlayback()
-			if m.db != nil {
-				m.db.Close()
-			}
-			m.quitting = true
-			return m, tea.Quit
-		}
 	}
 	return m, nil
 }
@@ -1923,7 +1914,7 @@ func (m tagsModel) View() string {
 	if m.mode == modeBrowse || m.mode == "" {
 		switch m.viewMode {
 		case viewLibrary:
-			return m.viewLibraryStub()
+			return m.viewLibrary()
 		case viewQueue:
 			return m.viewQueue()
 		}
@@ -1946,11 +1937,6 @@ func (m tagsModel) View() string {
 	default:
 		return m.viewBrowse()
 	}
-}
-
-func (m tagsModel) viewLibraryStub() string {
-	return headerStyle.Render("  sndtool") + dimStyle.Render("  [Library]") + "\n\n" +
-		dimStyle.Render("  Library mode — not yet implemented. Press v to switch.") + "\n"
 }
 
 func (m tagsModel) viewBrowse() string {

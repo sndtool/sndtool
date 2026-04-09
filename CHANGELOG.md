@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- TUI: library mode — `:` query prompt with keyword tab-completion, syntax highlighting; query execution (album/artist/track/year/genre/playlist/mixed); drill-down navigation (enter to open, h/backspace to go back); breadcrumb trail; play/append-to-queue from results; space to mark, search term highlighting
 - TUI: three view modes (Files/Library/Queue) — cycle with `v` key
 - TUI: play queue integration — `P` builds queue from visible entries, `A` appends to queue, Shift+Up/Down navigate queue, auto-advance uses queue
 - TUI: flash only the speaker emoji instead of the entire line during playback

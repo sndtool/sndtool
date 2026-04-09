@@ -136,6 +136,30 @@ directory (defaults to current directory) as well a file management operations.
 | `esc`            | Clear filter (if active), otherwise quit   |
 | `q`              | Quit                                       |
 
+### Library Mode
+
+Press `v` to switch to Library view (requires `sndtool.db`). Use `:` to open the
+query prompt and search your music library.
+
+**Query syntax:** `[view] [terms...] [field terms...]`
+
+- Views: `album`, `artist`, `track`, `year`, `genre`, `playlist`
+- Fields: `artist`, `album`, `year`, `genre` (filter within a view)
+- Examples: `album sermon`, `artist johnson`, `track artist smith year 2025`
+
+| Key              | Action                                     |
+|------------------|--------------------------------------------|
+| `:`              | Open query prompt                          |
+| `enter`          | Drill into group / play track              |
+| `h`/`backspace`  | Go back one drill level                    |
+| `j`/`k`          | Navigate results                           |
+| `space`          | Mark/unmark                                |
+| `P`              | Play track or drill into group             |
+| `A`              | Append to queue                            |
+| `tab`            | Accept completion (in query prompt)        |
+| `v`              | Switch to queue view                       |
+| `esc`            | Clear query                                |
+
 ### Merge
 
 ```

@@ -53,6 +53,26 @@ go build -o sndtool .        # build
 | `esc` | Clear filter (if active), otherwise quit |
 | `q` | Quit |
 
+### Library Mode Keys
+
+| Key | Action |
+|-----|--------|
+| `:` | Open query prompt |
+| `enter` | Drill into group / play track |
+| `h`/`backspace` | Go back one drill level |
+| `j`/`k`, `up`/`down` | Navigate results |
+| `space` | Mark/unmark |
+| `P` | Play track or drill into group |
+| `A` | Append to queue (marked items or current) |
+| `a` | Add to playlist (placeholder) |
+| `S` | Pause/resume playback |
+| `Shift+←/→` | Seek backward/forward 10s |
+| `Shift+↑/↓` | Previous/next song |
+| `+`/`-` | Volume up/down |
+| `v` | Switch to queue view |
+| `esc` | Clear query |
+| `q` | Quit |
+
 ## Docs Policy
 
 After any code changes, update these files to stay in sync:

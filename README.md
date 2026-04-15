@@ -16,6 +16,8 @@ subcommands for scripting and automation.
 
 Think [lazygit](https://github.com/jesseduffield/lazygit) but for audio files.
 
+> **Demo video** — click to watch on YouTube
+
 [![sndtool demo](https://img.youtube.com/vi/dBeRCrXV70Y/maxresdefault.jpg)](https://youtu.be/dBeRCrXV70Y)
 
 ## ✨ Features

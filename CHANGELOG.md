@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- README: replace screenshot with YouTube demo video link
+
 ## v0.2.0 (2026-04-15)
 
 - Fix: pgdn/pgup/ctrl-f/ctrl-b now work in queue view for page scrolling

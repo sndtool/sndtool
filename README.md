@@ -128,7 +128,7 @@ directory (defaults to current directory) as well a file management operations.
 | `Shift+←`/`→`   | Seek backward/forward 10 seconds           |
 | `Shift+↑`/`↓`   | Previous/next song                         |
 | `A`              | Append tracks to play queue                |
-| `v`              | Cycle view mode (Files/Library/Queue)      |
+| `tab`            | Cycle view mode (Files/Library/Queue)      |
 | `+`/`-`          | Volume up/down                             |
 | `PgDn`/`Ctrl-f`  | Page down                                  |
 | `PgUp`/`Ctrl-b`  | Page up                                    |
@@ -138,7 +138,7 @@ directory (defaults to current directory) as well a file management operations.
 
 ### Library Mode
 
-Press `v` to switch to Library view (requires `sndtool.db`). Use `:` to open the
+Press `tab` to switch to Library view (requires `sndtool.db`). Use `:` to open the
 query prompt and search your music library.
 
 **Query syntax:** `[view] [terms...] [field terms...]`
@@ -159,7 +159,7 @@ query prompt and search your music library.
 | `a`              | Add to playlist                            |
 | `d`              | Delete playlist / remove track from playlist |
 | `tab`            | Accept completion (in query prompt)        |
-| `v`              | Switch to queue view                       |
+| `tab`            | Switch to next view                        |
 | `esc`            | Clear query                                |
 
 ### Play Queue

@@ -66,19 +66,19 @@ func TestModeCycling(t *testing.T) {
 	}
 
 	// Files → Library
-	m = sendKey(m, "v")
+	m = sendKey(m, "tab")
 	if m.viewMode != viewLibrary {
 		t.Errorf("after 1st v: viewMode = %q, want %q", m.viewMode, viewLibrary)
 	}
 
 	// Library → Queue
-	m = sendKey(m, "v")
+	m = sendKey(m, "tab")
 	if m.viewMode != viewQueue {
 		t.Errorf("after 2nd v: viewMode = %q, want %q", m.viewMode, viewQueue)
 	}
 
 	// Queue → Files
-	m = sendKey(m, "v")
+	m = sendKey(m, "tab")
 	if m.viewMode != viewFiles {
 		t.Errorf("after 3rd v: viewMode = %q, want %q", m.viewMode, viewFiles)
 	}
@@ -103,7 +103,7 @@ func TestModeCycling_FilesToQueue(t *testing.T) {
 	// Test that viewFiles->Library->Queue using updateBrowse logic requires mode override.
 	// Instead just verify the queue-to-files part:
 	m.viewMode = viewQueue
-	m = sendKey(m, "v")
+	m = sendKey(m, "tab")
 	if m.viewMode != viewFiles {
 		t.Errorf("queue 'v' → files: viewMode = %q, want %q", m.viewMode, viewFiles)
 	}
@@ -119,12 +119,12 @@ func TestModeCycling_NoDB(t *testing.T) {
 		t.Fatalf("initial viewMode = %q, want %q", m.viewMode, viewFiles)
 	}
 
-	m = sendKey(m, "v")
+	m = sendKey(m, "tab")
 	if m.viewMode != viewQueue {
 		t.Errorf("after 1st v (no DB): viewMode = %q, want %q", m.viewMode, viewQueue)
 	}
 
-	m = sendKey(m, "v")
+	m = sendKey(m, "tab")
 	if m.viewMode != viewFiles {
 		t.Errorf("after 2nd v (no DB): viewMode = %q, want %q", m.viewMode, viewFiles)
 	}

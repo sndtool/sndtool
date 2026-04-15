@@ -3,7 +3,7 @@
 ## Unreleased
 
 - TUI: library mode — `:` query prompt with keyword tab-completion, syntax highlighting; query execution (album/artist/track/year/genre/playlist/mixed); drill-down navigation (enter to open, h/backspace to go back); breadcrumb trail; play/append-to-queue from results; space to mark, search term highlighting
-- TUI: three view modes (Files/Library/Queue) — cycle with `v` key
+- TUI: three view modes (Files/Library/Queue) — cycle with `tab` key
 - TUI: play queue integration — `P` builds queue from visible entries, `A` appends to queue, Shift+Up/Down navigate queue, auto-advance uses queue
 - TUI: flash only the speaker emoji instead of the entire line during playback
 - TUI: queue view — columnar track list with 🔊 playing indicator, cursor navigation (j/k), space-to-mark, d-to-remove, P-to-jump-to-play
@@ -14,7 +14,9 @@
 - Play queue: independent playback queue persists across view changes
 - Play queue: P replaces queue, A appends, Shift+Up/Down navigates queue
 - Playlists: create, rename, delete; add/remove tracks
-- Three view modes: Files, Library, Queue — cycle with v
+- Three view modes: Files, Library, Queue — cycle with tab
+- Fix tab bar being pushed off screen in library view (chrome height calculation)
+- Add tab bar to all shared views (detail, edit, confirm, rename, playlist picker, queue)
 - Background scanner keeps library database in sync with files on disk
 
 ## v0.1.2 (2026-04-08)

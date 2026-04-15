@@ -27,12 +27,12 @@ func (m tagsModel) updateQueue(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch keyMsg.String() {
 	case "q":
-		m.stopPlayback()
 		m.saveAndCloseDB()
+		m.stopPlayback()
 		m.quitting = true
 		return m, tea.Quit
 
-	case "v":
+	case "tab":
 		m.viewMode = viewFiles
 		return m, nil
 
@@ -82,6 +82,28 @@ func (m tagsModel) updateQueue(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m = m.clampQueueScroll()
 			m.statusMsg = fmt.Sprintf("Removed %d track(s) from queue", len(toRemove))
+		}
+
+	case "enter", "l":
+		// Show tag details for selected track
+		if n > 0 {
+			t := tracks[m.queueCursor]
+			m.viewEntry = tagEntry{
+				path:   t.Path,
+				name:   filepath.Base(t.Path),
+				artist: t.Artist,
+				album:  t.Album,
+				title:  t.Title,
+				year:   t.Year,
+			}
+			m.mode = modeDetail
+		}
+		return m, nil
+
+	case "F":
+		// Open track directory in file view
+		if n > 0 && tracks[m.queueCursor].Path != "" {
+			return m.openInFileView(tracks[m.queueCursor].Path)
 		}
 
 	case "P":
@@ -183,8 +205,8 @@ func (m tagsModel) visibleQueueRows() int {
 func (m tagsModel) viewQueue() string {
 	var b strings.Builder
 
-	b.WriteString(headerStyle.Render("  sndtool") + dimStyle.Render("  [Queue]") + "\n")
-	b.WriteString(dimStyle.Render("j/k: nav  space: mark  d: remove  P: play  S: pause  ⇧←→: seek  ⇧↑↓: prev/next  +/-: vol  v: files  q: quit") + "\n\n")
+	b.WriteString(m.renderTabBar() + "\n")
+	b.WriteString(dimStyle.Render("j/k: nav  enter: details  space: mark  d: remove  P: play  S: pause  ⇧←→: seek  ⇧↑↓: prev/next  +/-: vol  F: files  q: quit") + "\n\n")
 
 	tracks := m.queue.Tracks()
 	n := len(tracks)

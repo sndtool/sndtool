@@ -185,8 +185,8 @@ func (m tagsModel) updateLibraryBrowsing(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch msg.String() {
 	case "q":
-		m.stopPlayback()
 		m.saveAndCloseDB()
+		m.stopPlayback()
 		m.quitting = true
 		return m, tea.Quit
 
@@ -219,14 +219,23 @@ func (m tagsModel) updateLibraryBrowsing(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case "enter":
+	case "enter", "l":
 		if n == 0 {
 			return m, nil
 		}
 		entry := m.libResults[m.libCursor]
 		switch entry.entryType {
 		case libEntryTrack:
-			return m.libPlayTrack(m.libCursor)
+			m.viewEntry = tagEntry{
+				path:   entry.path,
+				name:   filepath.Base(entry.path),
+				artist: entry.artist,
+				album:  entry.album,
+				title:  entry.title,
+				year:   entry.year,
+			}
+			m.mode = modeDetail
+			return m, nil
 		case libEntrySectionHeader:
 			return m, nil
 		default:
@@ -245,7 +254,7 @@ func (m tagsModel) updateLibraryBrowsing(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case "v":
+	case "tab":
 		m.viewMode = viewQueue
 		return m, nil
 
@@ -314,6 +323,28 @@ func (m tagsModel) updateLibraryBrowsing(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "A":
 		return m.libAppendToQueue()
+
+	case "F":
+		if m.libCursor < len(m.libResults) {
+			entry := m.libResults[m.libCursor]
+			switch entry.entryType {
+			case libEntryTrack:
+				if entry.path != "" {
+					return m.openInFileView(entry.path)
+				}
+			case libEntryAlbum:
+				tracks, err := QueryTracks(m.db, nil, map[string][]string{"album": {entry.album}})
+				if err == nil && len(tracks) > 0 {
+					return m.openInFileView(tracks[0].Path)
+				}
+			case libEntryArtist:
+				tracks, err := QueryTracks(m.db, nil, map[string][]string{"artist": {entry.artist}})
+				if err == nil && len(tracks) > 0 {
+					return m.openInFileView(tracks[0].Path)
+				}
+			}
+		}
+		return m, nil
 
 	case "a":
 		if m.db == nil {
@@ -552,10 +583,10 @@ func (m *tagsModel) clampLibraryScroll() {
 }
 
 func (m tagsModel) visibleLibraryRows() int {
-	// header(1) + help(1) + blank(1) + query(1) = 4
+	// tab bar(1) + help(1) + blank(1) + query(1) = 4
 	// completions take space when editing
-	// footer: count(1) + status/playback(1) = 2
-	chrome := 6
+	// footer: blank+count(2) + blank+playback(2) = 4
+	chrome := 8
 	compLines := 0
 	if m.libEditing && len(m.libCompletions) > 0 {
 		compLines = len(m.libCompletions)
@@ -1137,8 +1168,8 @@ func (m *tagsModel) acceptCompletion(completion string) {
 func (m tagsModel) viewLibrary() string {
 	var b strings.Builder
 
-	b.WriteString(headerStyle.Render("  sndtool") + dimStyle.Render("  [Library]") + "\n")
-	b.WriteString(dimStyle.Render(":: query  j/k: nav  enter: open  h: back  P: play  A: append  space: mark  S: pause  v: queue  q: quit") + "\n\n")
+	b.WriteString(m.renderTabBar() + "\n")
+	b.WriteString(dimStyle.Render(":: query  j/k: nav  enter: open  h: back  P: play  A: append  space: mark  S: pause  F: files  q: quit") + "\n\n")
 
 	// Query line
 	b.WriteString(m.renderQueryLine())

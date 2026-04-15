@@ -126,6 +126,7 @@ func (m tagsModel) updatePickerNaming(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m tagsModel) viewPlaylistPicker() string {
 	var b strings.Builder
 
+	b.WriteString(m.renderTabBar() + "\n")
 	b.WriteString(headerStyle.Render("  Add to Playlist") + "\n")
 	b.WriteString(dimStyle.Render("j/k: nav  enter: select  esc: cancel") + "\n\n")
 

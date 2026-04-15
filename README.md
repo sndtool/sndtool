@@ -127,12 +127,87 @@ directory (defaults to current directory) as well a file management operations.
 | `S`              | Pause/resume playback                      |
 | `Shift+←`/`→`   | Seek backward/forward 10 seconds           |
 | `Shift+↑`/`↓`   | Previous/next song                         |
+| `A`              | Append tracks to play queue                |
+| `v`              | Cycle view mode (Files/Library/Queue)      |
 | `+`/`-`          | Volume up/down                             |
 | `PgDn`/`Ctrl-f`  | Page down                                  |
 | `PgUp`/`Ctrl-b`  | Page up                                    |
 | `←`/`→`          | Horizontal scroll                          |
 | `esc`            | Clear filter (if active), otherwise quit   |
 | `q`              | Quit                                       |
+
+### Library Mode
+
+Press `v` to switch to Library view (requires `sndtool.db`). Use `:` to open the
+query prompt and search your music library.
+
+**Query syntax:** `[view] [terms...] [field terms...]`
+
+- Views: `album`, `artist`, `track`, `year`, `genre`, `playlist`
+- Fields: `artist`, `album`, `year`, `genre` (filter within a view)
+- Examples: `album sermon`, `artist johnson`, `track artist smith year 2025`
+
+| Key              | Action                                     |
+|------------------|--------------------------------------------|
+| `:`              | Open query prompt                          |
+| `enter`          | Drill into group / play track              |
+| `h`/`backspace`  | Go back one drill level                    |
+| `j`/`k`          | Navigate results                           |
+| `space`          | Mark/unmark                                |
+| `P`              | Play track or drill into group             |
+| `A`              | Append to queue                            |
+| `a`              | Add to playlist                            |
+| `d`              | Delete playlist / remove track from playlist |
+| `tab`            | Accept completion (in query prompt)        |
+| `v`              | Switch to queue view                       |
+| `esc`            | Clear query                                |
+
+### Play Queue
+
+The play queue is an independent playback list that persists as you switch
+between view modes. Use `P` to replace the queue with the current selection and
+start playing, or `A` to append tracks without interrupting playback.
+`Shift+↑`/`↓` skips to the previous/next track in the queue regardless of
+which view you are in.
+
+Switch to Queue view (`v` twice from Files, or once from Library) to see the
+full queue as a columnar track list with a playing indicator. From Queue view:
+
+| Key      | Action                              |
+|----------|-------------------------------------|
+| `j`/`k`  | Navigate                            |
+| `space`  | Mark/unmark                         |
+| `d`      | Remove track(s) from queue          |
+| `P`      | Jump to and play highlighted track  |
+
+### Playlists
+
+Playlists are stored in `sndtool.db` alongside track metadata. From Library
+view, navigate to the `playlist` view (`:` → `playlist`) to see all playlists.
+
+| Action                        | How                                                 |
+|-------------------------------|-----------------------------------------------------|
+| Add track to playlist         | `a` on a track in Library view                      |
+| Remove track from playlist    | `d` inside an open playlist                         |
+| Delete a playlist             | `d` on a playlist in the playlist list              |
+| Create a new playlist         | Choose "New playlist…" in the playlist picker (`a`) |
+
+### Library Database and Background Scanner
+
+When you open a directory that contains a `sndtool.db` file, or confirm
+creation of one on first launch, sndtool opens the SQLite database and starts
+a background scanner. The scanner walks the directory tree, reads ID3 tags from
+every audio file, and stores the metadata in the database.
+
+The database is created at `sndtool.db` inside the target directory. It
+contains two kinds of data:
+
+- **Tracks** — path, artist, album, title, year, genre, duration
+- **Playlists** — named ordered lists of tracks
+
+The scanner runs in the background and updates the library as files are added,
+changed, or removed. You can use Library view (`v`) immediately; results refine
+as scanning completes.
 
 ### Merge
 
@@ -159,6 +234,7 @@ go build -o sndtool .
 - [Lip Gloss](https://github.com/charmbracelet/lipgloss) — terminal styling
 - [id3v2](https://github.com/bogem/id3v2) — ID3 tag reading/writing
 - [mp3lib](https://github.com/dmulholl/mp3lib) — MP3 frame-level processing
+- [modernc.org/sqlite](https://pkg.go.dev/modernc.org/sqlite) — SQLite (pure Go, no cgo)
 - [mpv](https://mpv.io/) — audio playback (optional, required for `P` play)
 
 ## 💬 Contributing

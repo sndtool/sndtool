@@ -8,29 +8,29 @@ import (
 
 func TestParseQuery(t *testing.T) {
 	tests := []struct {
-		input        string
-		wantView     ViewType
-		wantTerms    []string
-		wantFilters  map[string][]string
+		input       string
+		wantView    ViewType
+		wantTerms   []string
+		wantFilters map[string][]string
 	}{
 		{
 			input:    "album",
 			wantView: ViewAlbum,
 		},
 		{
-			input:    "album sermon",
-			wantView: ViewAlbum,
+			input:     "album sermon",
+			wantView:  ViewAlbum,
 			wantTerms: []string{"sermon"},
 		},
 		{
-			input:    "album sunday sermon",
-			wantView: ViewAlbum,
+			input:     "album sunday sermon",
+			wantView:  ViewAlbum,
 			wantTerms: []string{"sunday", "sermon"},
 		},
 		{
-			input:    "album sermon year 2025",
-			wantView: ViewAlbum,
-			wantTerms: []string{"sermon"},
+			input:       "album sermon year 2025",
+			wantView:    ViewAlbum,
+			wantTerms:   []string{"sermon"},
 			wantFilters: map[string][]string{"year": {"2025"}},
 		},
 		{
@@ -42,14 +42,14 @@ func TestParseQuery(t *testing.T) {
 			},
 		},
 		{
-			input:    "album sunday sermon artist johnson",
-			wantView: ViewAlbum,
-			wantTerms: []string{"sunday", "sermon"},
+			input:       "album sunday sermon artist johnson",
+			wantView:    ViewAlbum,
+			wantTerms:   []string{"sunday", "sermon"},
 			wantFilters: map[string][]string{"artist": {"johnson"}},
 		},
 		{
-			input:    "artist smith",
-			wantView: ViewArtist,
+			input:     "artist smith",
+			wantView:  ViewArtist,
 			wantTerms: []string{"smith"},
 		},
 		{
@@ -57,8 +57,8 @@ func TestParseQuery(t *testing.T) {
 			wantView: ViewPlaylist,
 		},
 		{
-			input:    "sermon on hope",
-			wantView: ViewMixed,
+			input:     "sermon on hope",
+			wantView:  ViewMixed,
 			wantTerms: []string{"sermon", "on", "hope"},
 		},
 		{
@@ -66,13 +66,13 @@ func TestParseQuery(t *testing.T) {
 			wantView: ViewMixed,
 		},
 		{
-			input:    "year 2025",
-			wantView: ViewYear,
+			input:     "year 2025",
+			wantView:  ViewYear,
 			wantTerms: []string{"2025"},
 		},
 		{
-			input:    "genre gospel",
-			wantView: ViewGenre,
+			input:     "genre gospel",
+			wantView:  ViewGenre,
 			wantTerms: []string{"gospel"},
 		},
 		{

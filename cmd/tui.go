@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -8,7 +9,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"database/sql"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -94,10 +94,10 @@ type tagsModel struct {
 	hasDB    bool   // true if sndtool.db is available
 
 	// Play queue
-	queue        *PlayQueue
-	queueCursor  int          // cursor position in queue view
-	queueOffset  int          // scroll offset in queue view
-	queueMarked  map[int]bool // marked tracks in queue view
+	queue       *PlayQueue
+	queueCursor int          // cursor position in queue view
+	queueOffset int          // scroll offset in queue view
+	queueMarked map[int]bool // marked tracks in queue view
 
 	// Database
 	db       *sql.DB
@@ -131,7 +131,7 @@ type tagsModel struct {
 	playPaused   bool      // true when playback is paused
 	playVolume   float64   // current volume percentage
 	playGen      int       // generation counter to discard stale playDoneMsg
-	restorePos   float64  // saved position to restore on startup (0 = none)
+	restorePos   float64   // saved position to restore on startup (0 = none)
 
 	// Playlist picker state (modePlaylistPicker)
 	pickerPlaylists []PlaylistResult
@@ -2062,9 +2062,9 @@ var (
 	dirStyle      = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("14"))
 	statusStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
 	matchStyle    = lipgloss.NewStyle().Bold(true).Background(lipgloss.Color("11")).Foreground(lipgloss.Color("0"))
-	playStyle    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("33")) // blue
-	activeTab    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("15")).Background(lipgloss.Color("4")).Padding(0, 1)
-	inactiveTab  = lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Padding(0, 1)
+	playStyle     = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("33")) // blue
+	activeTab     = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("15")).Background(lipgloss.Color("4")).Padding(0, 1)
+	inactiveTab   = lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Padding(0, 1)
 )
 
 // renderTabBar renders the Library | Queue | Files tab bar.

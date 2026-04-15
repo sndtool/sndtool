@@ -34,9 +34,9 @@ func (q *PlayQueue) Append(tracks []QueueTrack) {
 }
 
 // Remove deletes tracks at the given indices and adjusts current intelligently:
-// - If the current track is removed, advance to the next surviving track (or
-//   clamp to the new end).
-// - If tracks before current are removed, shift current down accordingly.
+//   - If the current track is removed, advance to the next surviving track (or
+//     clamp to the new end).
+//   - If tracks before current are removed, shift current down accordingly.
 func (q *PlayQueue) Remove(indices map[int]bool) {
 	if len(indices) == 0 {
 		return

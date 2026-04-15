@@ -62,7 +62,7 @@ Place the binary in `/usr/local/bin` or `~/.local/bin`.
 
 ### Windows
 
-** Note, the Windows version needs some work with MPV interaction **
+**Note, the Windows version needs some work with MPV interaction**
 
 1. Create a directory such as `C:\Tools`
 2. Move `sndtool.exe` into that directory

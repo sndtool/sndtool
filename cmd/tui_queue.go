@@ -36,6 +36,14 @@ func (m tagsModel) updateQueue(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewMode = viewFiles
 		return m, nil
 
+	case "shift+tab":
+		if m.hasDB {
+			m.viewMode = viewLibrary
+		} else {
+			m.viewMode = viewFiles
+		}
+		return m, nil
+
 	case "up", "k":
 		if m.queueCursor > 0 {
 			m.queueCursor--
@@ -47,6 +55,25 @@ func (m tagsModel) updateQueue(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.queueCursor++
 			m = m.clampQueueScroll()
 		}
+
+	case "pgdown", "ctrl+f":
+		vis := m.visibleQueueRows()
+		m.queueCursor += vis
+		if m.queueCursor >= n {
+			m.queueCursor = n - 1
+		}
+		if m.queueCursor < 0 {
+			m.queueCursor = 0
+		}
+		m = m.clampQueueScroll()
+
+	case "pgup", "ctrl+b":
+		vis := m.visibleQueueRows()
+		m.queueCursor -= vis
+		if m.queueCursor < 0 {
+			m.queueCursor = 0
+		}
+		m = m.clampQueueScroll()
 
 	case " ":
 		// Mark/unmark selected queue entry

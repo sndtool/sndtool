@@ -116,6 +116,9 @@ func (m tagsModel) updatePickerNaming(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.pickerNewName = m.pickerNewName[:len(m.pickerNewName)-1]
 		}
 
+	case tea.KeySpace:
+		m.pickerNewName = append(m.pickerNewName, ' ')
+
 	case tea.KeyRunes:
 		m.pickerNewName = append(m.pickerNewName, msg.Runes...)
 	}

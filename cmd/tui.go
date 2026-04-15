@@ -169,7 +169,7 @@ func (m tagsModel) Init() tea.Cmd {
 	if m.viewMode == viewLibrary {
 		cmds = append(cmds, func() tea.Msg { return libraryReadyMsg{} })
 	}
-	if m.queue.Current().Path != "" {
+	if cur := m.queue.Current(); cur != nil && cur.Path != "" {
 		cmds = append(cmds, func() tea.Msg { return restorePlaybackMsg{} })
 	}
 	if len(cmds) == 0 {
@@ -636,6 +636,7 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 	case "tab":
+		// Forward cycle: Library → Queue → Files → Library
 		switch m.viewMode {
 		case viewFiles:
 			if m.hasDB {
@@ -646,6 +647,22 @@ func (m tagsModel) updateBrowse(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case viewLibrary:
 			m.viewMode = viewQueue
 		case viewQueue:
+			m.viewMode = viewFiles
+		}
+		return m, nil
+
+	case "shift+tab":
+		// Reverse cycle: Library → Files → Queue → Library
+		switch m.viewMode {
+		case viewFiles:
+			m.viewMode = viewQueue
+		case viewQueue:
+			if m.hasDB {
+				m.viewMode = viewLibrary
+			} else {
+				m.viewMode = viewFiles
+			}
+		case viewLibrary:
 			m.viewMode = viewFiles
 		}
 		return m, nil
@@ -2050,15 +2067,15 @@ var (
 	inactiveTab  = lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Padding(0, 1)
 )
 
-// renderTabBar renders the Files | Library | Queue tab bar.
+// renderTabBar renders the Library | Queue | Files tab bar.
 func (m tagsModel) renderTabBar() string {
 	tabs := []struct {
 		label string
 		mode  string
 	}{
-		{"Files", viewFiles},
 		{"Library", viewLibrary},
 		{"Queue", viewQueue},
+		{"Files", viewFiles},
 	}
 	var parts []string
 	for _, t := range tabs {

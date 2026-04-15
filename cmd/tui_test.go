@@ -55,9 +55,7 @@ func sendKey(m tagsModel, key string) tagsModel {
 	return newM.(tagsModel)
 }
 
-// TestModeCycling verifies that 'v' in Files→Library (when DB present), and 'v' in Library→Files.
-// Note: Library 'v' is context-aware (navigates to file view), Queue 'v' also goes to Files.
-// v cycles Files→Library→Queue→Files
+// TestModeCycling verifies tab cycles Library→Queue→Files→Library (with DB).
 func TestModeCycling(t *testing.T) {
 	m := newTestModel(t)
 
@@ -68,48 +66,50 @@ func TestModeCycling(t *testing.T) {
 	// Files → Library
 	m = sendKey(m, "tab")
 	if m.viewMode != viewLibrary {
-		t.Errorf("after 1st v: viewMode = %q, want %q", m.viewMode, viewLibrary)
+		t.Errorf("after 1st tab: viewMode = %q, want %q", m.viewMode, viewLibrary)
 	}
 
 	// Library → Queue
 	m = sendKey(m, "tab")
 	if m.viewMode != viewQueue {
-		t.Errorf("after 2nd v: viewMode = %q, want %q", m.viewMode, viewQueue)
+		t.Errorf("after 2nd tab: viewMode = %q, want %q", m.viewMode, viewQueue)
 	}
 
 	// Queue → Files
 	m = sendKey(m, "tab")
 	if m.viewMode != viewFiles {
-		t.Errorf("after 3rd v: viewMode = %q, want %q", m.viewMode, viewFiles)
+		t.Errorf("after 3rd tab: viewMode = %q, want %q", m.viewMode, viewFiles)
 	}
 }
 
-// TestModeCycling_FilesToQueue verifies that when hasDB is false, 'v' from Files→Queue,
-// and from updateBrowse with DB present, viewFiles→viewLibrary→viewQueue→viewFiles cycles.
-func TestModeCycling_FilesToQueue(t *testing.T) {
-	// Start with DB, go Files → Library, then manually set to viewFiles again → Queue
+// TestModeCycling_ShiftTab verifies shift+tab cycles in reverse: Files→Queue→Library→Files.
+func TestModeCycling_ShiftTab(t *testing.T) {
 	m := newTestModel(t)
 
-	// Simulate the internal updateBrowse cycle by cycling through viewFiles twice
-	// to hit viewQueue: Files→Library→(back to files)... use updateBrowse directly.
-	// The updateBrowse 'v' cycles: Files→Library (if hasDB), Library→Queue, Queue→Files.
-	// But updateLibraryBrowsing 'v' goes directly to Files (different handler).
-	// So the Files→Library→Queue cycle via 'v' requires staying in updateBrowse path.
-	// We can test this by cycling viewMode directly in updateBrowse:
-	// Set viewMode=viewLibrary but ensure we're NOT in updateLibrary path (mode != modeBrowse won't help).
-	// Actually: updateBrowse is only called when m.mode is NOT viewLibrary or viewQueue.
-	// So the correct test is: from viewFiles, press v twice quickly? No — once goes to library,
-	// then updateLibrary takes over for the next v.
-	// Test that viewFiles->Library->Queue using updateBrowse logic requires mode override.
-	// Instead just verify the queue-to-files part:
-	m.viewMode = viewQueue
-	m = sendKey(m, "tab")
 	if m.viewMode != viewFiles {
-		t.Errorf("queue 'v' → files: viewMode = %q, want %q", m.viewMode, viewFiles)
+		t.Fatalf("initial viewMode = %q, want %q", m.viewMode, viewFiles)
+	}
+
+	// Files → Queue (reverse)
+	m = sendKey(m, "shift+tab")
+	if m.viewMode != viewQueue {
+		t.Errorf("after 1st shift+tab: viewMode = %q, want %q", m.viewMode, viewQueue)
+	}
+
+	// Queue → Library (reverse)
+	m = sendKey(m, "shift+tab")
+	if m.viewMode != viewLibrary {
+		t.Errorf("after 2nd shift+tab: viewMode = %q, want %q", m.viewMode, viewLibrary)
+	}
+
+	// Library → Files (reverse)
+	m = sendKey(m, "shift+tab")
+	if m.viewMode != viewFiles {
+		t.Errorf("after 3rd shift+tab: viewMode = %q, want %q", m.viewMode, viewFiles)
 	}
 }
 
-// TestModeCycling_NoDB verifies that without a DB, 'v' toggles Files↔Queue (skips library).
+// TestModeCycling_NoDB verifies that without a DB, tab toggles Files↔Queue (skips library).
 func TestModeCycling_NoDB(t *testing.T) {
 	m := newTestModel(t)
 	m.db = nil
@@ -121,12 +121,23 @@ func TestModeCycling_NoDB(t *testing.T) {
 
 	m = sendKey(m, "tab")
 	if m.viewMode != viewQueue {
-		t.Errorf("after 1st v (no DB): viewMode = %q, want %q", m.viewMode, viewQueue)
+		t.Errorf("after 1st tab (no DB): viewMode = %q, want %q", m.viewMode, viewQueue)
 	}
 
 	m = sendKey(m, "tab")
 	if m.viewMode != viewFiles {
-		t.Errorf("after 2nd v (no DB): viewMode = %q, want %q", m.viewMode, viewFiles)
+		t.Errorf("after 2nd tab (no DB): viewMode = %q, want %q", m.viewMode, viewFiles)
+	}
+
+	// Shift+tab reverse without DB
+	m = sendKey(m, "shift+tab")
+	if m.viewMode != viewQueue {
+		t.Errorf("shift+tab from files (no DB): viewMode = %q, want %q", m.viewMode, viewQueue)
+	}
+
+	m = sendKey(m, "shift+tab")
+	if m.viewMode != viewFiles {
+		t.Errorf("shift+tab from queue (no DB): viewMode = %q, want %q", m.viewMode, viewFiles)
 	}
 }
 
@@ -254,5 +265,37 @@ func TestQueueAppend(t *testing.T) {
 	// current should remain at 0 since queue was not empty
 	if q.CurrentIndex() != 0 {
 		t.Errorf("after second Append: CurrentIndex = %d, want 0", q.CurrentIndex())
+	}
+}
+
+// TestLibraryEditingTyping verifies that pressing ':' enters editing mode
+// and subsequent character keys are inserted into the query input.
+func TestLibraryEditingTyping(t *testing.T) {
+	m := newTestModel(t)
+	m.viewMode = viewLibrary
+	m.libQuery = "album"
+	m.executeLibraryQuery()
+
+	// Press ':' to enter editing mode
+	m = sendKey(m, ":")
+	if !m.libEditing {
+		t.Fatal("expected libEditing=true after pressing ':'")
+	}
+	if string(m.libQueryInput) != "album" {
+		t.Fatalf("libQueryInput = %q, want %q", string(m.libQueryInput), "album")
+	}
+
+	// Type ' ' (using real KeySpace type, as Bubble Tea sends) then 's'
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeySpace, Runes: []rune{' '}})
+	m = m2.(tagsModel)
+	if string(m.libQueryInput) != "album " {
+		t.Errorf("after space: libQueryInput = %q, want %q", string(m.libQueryInput), "album ")
+	}
+	m = sendKey(m, "s")
+	if string(m.libQueryInput) != "album s" {
+		t.Errorf("after 's': libQueryInput = %q, want %q", string(m.libQueryInput), "album s")
+	}
+	if !m.libEditing {
+		t.Error("expected libEditing still true after typing")
 	}
 }

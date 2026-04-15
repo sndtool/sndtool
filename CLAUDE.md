@@ -53,7 +53,8 @@ go build -o sndtool .        # build
 | `Shift+←/→` | Seek backward/forward 10s |
 | `Shift+↑/↓` | Previous/next song |
 | `A` | Append tracks to play queue |
-| `tab` | Cycle view mode (Files/Library/Queue) |
+| `tab` | Next view (Library/Queue/Files) |
+| `shift+tab` | Previous view |
 | `+`/`-` | Volume up/down |
 | `pgdn`/`ctrl-f` | Page down |
 | `pgup`/`ctrl-b` | Page up |
@@ -77,7 +78,7 @@ go build -o sndtool .        # build
 | `Shift+←/→` | Seek backward/forward 10s |
 | `Shift+↑/↓` | Previous/next song |
 | `+`/`-` | Volume up/down |
-| `tab` | Switch to next view |
+| `tab`/`shift+tab` | Next/previous view |
 | `esc` | Clear query |
 | `q` | Quit |
 
@@ -92,7 +93,7 @@ After any code changes, update these files to stay in sync:
 ## Conventions
 
 - TUI modes: `modeBrowse`, `modeDetail`, `modeEdit`, `modeEditDir`, `modeConfirm`, `modeRename`, `modeFind`, `modePlaylistPicker`
-- Three view modes: `viewFiles`, `viewLibrary`, `viewQueue` — cycled with `tab`
+- Three view modes: `viewLibrary`, `viewQueue`, `viewFiles` — cycled with `tab`/`shift+tab`
 - Don't change an existing key binding without explicitly confirming with the user first
 - File operations use `getMarkedOrCurrent()` to work on marked items or cursor item
 - Clipboard is an in-memory `[]string` of file paths; `clipboardCut` flag distinguishes copy vs cut

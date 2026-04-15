@@ -128,7 +128,8 @@ directory (defaults to current directory) as well a file management operations.
 | `Shift+←`/`→`   | Seek backward/forward 10 seconds           |
 | `Shift+↑`/`↓`   | Previous/next song                         |
 | `A`              | Append tracks to play queue                |
-| `tab`            | Cycle view mode (Files/Library/Queue)      |
+| `tab`            | Next view (Library/Queue/Files)            |
+| `shift+tab`      | Previous view                              |
 | `+`/`-`          | Volume up/down                             |
 | `PgDn`/`Ctrl-f`  | Page down                                  |
 | `PgUp`/`Ctrl-b`  | Page up                                    |
@@ -159,7 +160,7 @@ query prompt and search your music library.
 | `a`              | Add to playlist                            |
 | `d`              | Delete playlist / remove track from playlist |
 | `tab`            | Accept completion (in query prompt)        |
-| `tab`            | Switch to next view                        |
+| `tab`/`shift+tab`| Next/previous view                         |
 | `esc`            | Clear query                                |
 
 ### Play Queue

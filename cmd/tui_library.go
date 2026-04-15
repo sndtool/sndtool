@@ -97,6 +97,7 @@ func (m tagsModel) updateLibraryEditing(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.libQueryInput = append(m.libQueryInput[:m.libQueryPos-1], m.libQueryInput[m.libQueryPos:]...)
 			m.libQueryPos--
 			m.updateCompletions()
+			m.liveLibraryQuery()
 		}
 		return m, nil
 
@@ -164,17 +165,19 @@ func (m tagsModel) updateLibraryEditing(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	default:
-		if msg.Type == tea.KeyRunes {
+		if msg.Type == tea.KeySpace {
+			m.libQueryInput = append(m.libQueryInput[:m.libQueryPos], append([]rune{' '}, m.libQueryInput[m.libQueryPos:]...)...)
+			m.libQueryPos++
+			m.libCompletions = nil
+			m.libCompIdx = -1
+			m.liveLibraryQuery()
+		} else if msg.Type == tea.KeyRunes {
 			for _, r := range msg.Runes {
 				m.libQueryInput = append(m.libQueryInput[:m.libQueryPos], append([]rune{r}, m.libQueryInput[m.libQueryPos:]...)...)
 				m.libQueryPos++
 			}
-			if len(msg.Runes) > 0 && msg.Runes[0] == ' ' {
-				m.libCompletions = nil
-				m.libCompIdx = -1
-			} else {
-				m.updateCompletions()
-			}
+			m.updateCompletions()
+			m.liveLibraryQuery()
 		}
 		return m, nil
 	}
@@ -256,6 +259,10 @@ func (m tagsModel) updateLibraryBrowsing(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "tab":
 		m.viewMode = viewQueue
+		return m, nil
+
+	case "shift+tab":
+		m.viewMode = viewFiles
 		return m, nil
 
 	case "esc":
@@ -603,6 +610,12 @@ func (m tagsModel) visibleLibraryRows() int {
 		rows = 1
 	}
 	return rows
+}
+
+// liveLibraryQuery updates results as the user types in the query prompt.
+func (m *tagsModel) liveLibraryQuery() {
+	m.libQuery = string(m.libQueryInput)
+	m.executeLibraryQuery()
 }
 
 // --- Query execution ---

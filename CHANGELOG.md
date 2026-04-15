@@ -2,14 +2,24 @@
 
 ## Unreleased
 
+## v0.2.0 (2026-04-15)
+
 - Fix: pgdn/pgup/ctrl-f/ctrl-b now work in queue view for page scrolling
 - Fix: space key now works in library query editor and playlist name input
-- TUI: library mode — `:` query prompt with keyword tab-completion, syntax highlighting; query execution (album/artist/track/year/genre/playlist/mixed); drill-down navigation (enter to open, h/backspace to go back); breadcrumb trail; play/append-to-queue from results; space to mark, search term highlighting
+- TUI: library mode — `:` query prompt with keyword tab-completion, syntax
+  highlighting; query execution (album/artist/track/year/genre/playlist/mixed);
+  drill-down navigation (enter to open, h/backspace to go back); breadcrumb
+  trail; play/append-to-queue from results; space to mark, search term
+  highlighting
 - TUI: three view modes (Library/Queue/Files) — cycle with `tab`/`shift+tab`
-- TUI: play queue integration — `P` builds queue from visible entries, `A` appends to queue, Shift+Up/Down navigate queue, auto-advance uses queue
+- TUI: play queue integration — `P` builds queue from visible entries, `A`
+  appends to queue, Shift+Up/Down navigate queue, auto-advance uses queue
 - TUI: flash only the speaker emoji instead of the entire line during playback
-- TUI: queue view — columnar track list with 🔊 playing indicator, cursor navigation (j/k), space-to-mark, d-to-remove, P-to-jump-to-play
-- TUI: startup flow — detects `sndtool.db` in target directory; if absent, prompts "Create library database? (y/n)"; opens/creates DB, runs background scanner on init
+- TUI: queue view — columnar track list with 🔊 playing indicator, cursor
+  navigation (j/k), space-to-mark, d-to-remove, P-to-jump-to-play
+- TUI: startup flow — detects `sndtool.db` in target directory; if absent,
+  prompts "Create library database? (y/n)"; opens/creates DB, runs background
+  scanner on init
 - Library mode: SQLite-backed browsing by artist, album, year, genre, playlist
 - Library mode: command-driven query language with tab completion
 - Library mode: mixed search across artists, albums, and tracks
@@ -17,8 +27,10 @@
 - Play queue: P replaces queue, A appends, Shift+Up/Down navigates queue
 - Playlists: create, rename, delete; add/remove tracks
 - Three view modes: Files, Library, Queue — cycle with tab
-- Fix tab bar being pushed off screen in library view (chrome height calculation)
-- Add tab bar to all shared views (detail, edit, confirm, rename, playlist picker, queue)
+- Fix tab bar being pushed off screen in library view (chrome height
+  calculation)
+- Add tab bar to all shared views (detail, edit, confirm, rename, playlist
+  picker, queue)
 - Background scanner keeps library database in sync with files on disk
 
 ## v0.1.2 (2026-04-08)

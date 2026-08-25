@@ -34,8 +34,8 @@ Think [lazygit](https://github.com/jesseduffield/lazygit) but for audio files.
 - **File operations** — mark, copy, cut/move, paste, rename, and delete files
   from the TUI
 - **Audio playback** — play files directly from the TUI using
-  [mpv](https://mpv.io/) with pause/resume, seeking, prev/next track, and
-  volume control
+  [mpv](https://mpv.io/) with pause/resume, seeking, prev/next track, and volume
+  control
 
 ### Planned
 
@@ -106,43 +106,43 @@ sndtool [directory]
 Opens a TUI (terminal UI) to browse and edit ID3 tags for all audio files in the
 directory (defaults to current directory) as well a file management operations.
 
-| Key              | Action                                     |
-| ---------------- | ------------------------------------------ |
-| `j`/`k`, `↑`/`↓` | Navigate                                   |
-| `enter`          | Open directory / view file tags            |
-| `l`, `→`         | Enter directory                            |
-| `h`, `backspace` | Parent directory                           |
+| Key              | Action                                              |
+| ---------------- | --------------------------------------------------- |
+| `j`/`k`, `↑`/`↓` | Navigate                                            |
+| `enter`          | Open directory / view file tags                     |
+| `l`, `→`         | Enter directory                                     |
+| `h`, `backspace` | Parent directory                                    |
 | `e`              | Edit name and tags (file: single, directory: batch) |
-| `d`              | Delete with confirmation                   |
-| `space`          | Mark/unmark for batch operations           |
-| `c`              | Copy current or marked items               |
-| `x`              | Cut (mark for move)                        |
-| `p`              | Paste (copy or move)                       |
-| `m`              | Merge MP3s in directory                    |
-| `r`              | Rename                                     |
-| `/`              | Filter (filters list live)                 |
-| `f`              | Find (recursive search from start dir)     |
-| `b`              | Back to previous directory (before jump)   |
-| `~`              | Home (return to start directory)           |
-| `Q`              | Quality check — find files with missing tags |
-| `P`              | Play file with mpv (shows progress bar)    |
-| `S`              | Pause/resume playback                      |
-| `Shift+←`/`→`   | Seek backward/forward 10 seconds           |
-| `Shift+↑`/`↓`   | Previous/next song                         |
-| `A`              | Append tracks to play queue                |
-| `tab`            | Next view (Library/Queue/Files)            |
-| `shift+tab`      | Previous view                              |
-| `+`/`-`          | Volume up/down                             |
-| `PgDn`/`Ctrl-f`  | Page down                                  |
-| `PgUp`/`Ctrl-b`  | Page up                                    |
-| `←`/`→`          | Horizontal scroll                          |
-| `esc`            | Clear filter (if active), otherwise quit   |
-| `q`              | Quit                                       |
+| `d`              | Delete with confirmation                            |
+| `space`          | Mark/unmark for batch operations                    |
+| `c`              | Copy current or marked items                        |
+| `x`              | Cut (mark for move)                                 |
+| `p`              | Paste (copy or move)                                |
+| `m`              | Merge MP3s in directory                             |
+| `r`              | Rename                                              |
+| `/`              | Filter (filters list live)                          |
+| `f`              | Find (recursive search from start dir)              |
+| `b`              | Back to previous directory (before jump)            |
+| `~`              | Home (return to start directory)                    |
+| `Q`              | Quality check — find files with missing tags        |
+| `P`              | Play file with mpv (shows progress bar)             |
+| `S`              | Pause/resume playback                               |
+| `Shift+←`/`→`    | Seek backward/forward 10 seconds                    |
+| `Shift+↑`/`↓`    | Previous/next song                                  |
+| `A`              | Append tracks to play queue                         |
+| `tab`            | Next view (Library/Queue/Files)                     |
+| `shift+tab`      | Previous view                                       |
+| `+`/`-`          | Volume up/down                                      |
+| `PgDn`/`Ctrl-f`  | Page down                                           |
+| `PgUp`/`Ctrl-b`  | Page up                                             |
+| `←`/`→`          | Horizontal scroll                                   |
+| `esc`            | Clear filter (if active), otherwise quit            |
+| `q`              | Quit                                                |
 
 ### Library Mode
 
-Press `tab` to switch to Library view (requires `sndtool.db`). Use `:` to open the
-query prompt and search your music library.
+Press `tab` to switch to Library view (requires `sndtool.db`). Use `:` to open
+the query prompt and search your music library.
 
 **Query syntax:** `[view] [terms...] [field terms...]`
 
@@ -150,60 +150,60 @@ query prompt and search your music library.
 - Fields: `artist`, `album`, `year`, `genre` (filter within a view)
 - Examples: `album sermon`, `artist johnson`, `track artist smith year 2025`
 
-| Key              | Action                                     |
-|------------------|--------------------------------------------|
-| `:`              | Open query prompt                          |
-| `enter`          | Drill into group / play track              |
-| `h`/`backspace`  | Go back one drill level                    |
-| `j`/`k`          | Navigate results                           |
-| `space`          | Mark/unmark                                |
-| `P`              | Play track or drill into group             |
-| `A`              | Append to queue                            |
-| `a`              | Add to playlist                            |
-| `d`              | Delete playlist / remove track from playlist |
-| `tab`            | Accept completion (in query prompt)        |
-| `tab`/`shift+tab`| Next/previous view                         |
-| `esc`            | Clear query                                |
+| Key               | Action                                       |
+| ----------------- | -------------------------------------------- |
+| `:`               | Open query prompt                            |
+| `enter`           | Drill into group / play track                |
+| `h`/`backspace`   | Go back one drill level                      |
+| `j`/`k`           | Navigate results                             |
+| `space`           | Mark/unmark                                  |
+| `P`               | Play track or drill into group               |
+| `A`               | Append to queue                              |
+| `a`               | Add to playlist                              |
+| `d`               | Delete playlist / remove track from playlist |
+| `tab`             | Accept completion (in query prompt)          |
+| `tab`/`shift+tab` | Next/previous view                           |
+| `esc`             | Clear query                                  |
 
 ### Play Queue
 
 The play queue is an independent playback list that persists as you switch
 between view modes. Use `P` to replace the queue with the current selection and
 start playing, or `A` to append tracks without interrupting playback.
-`Shift+↑`/`↓` skips to the previous/next track in the queue regardless of
-which view you are in.
+`Shift+↑`/`↓` skips to the previous/next track in the queue regardless of which
+view you are in.
 
 Switch to Queue view (`v` twice from Files, or once from Library) to see the
 full queue as a columnar track list with a playing indicator. From Queue view:
 
-| Key      | Action                              |
-|----------|-------------------------------------|
-| `j`/`k`  | Navigate                            |
-| `space`  | Mark/unmark                         |
-| `d`      | Remove track(s) from queue          |
-| `P`      | Jump to and play highlighted track  |
+| Key     | Action                             |
+| ------- | ---------------------------------- |
+| `j`/`k` | Navigate                           |
+| `space` | Mark/unmark                        |
+| `d`     | Remove track(s) from queue         |
+| `P`     | Jump to and play highlighted track |
 
 ### Playlists
 
 Playlists are stored in `sndtool.db` alongside track metadata. From Library
 view, navigate to the `playlist` view (`:` → `playlist`) to see all playlists.
 
-| Action                        | How                                                 |
-|-------------------------------|-----------------------------------------------------|
-| Add track to playlist         | `a` on a track in Library view                      |
-| Remove track from playlist    | `d` inside an open playlist                         |
-| Delete a playlist             | `d` on a playlist in the playlist list              |
-| Create a new playlist         | Choose "New playlist…" in the playlist picker (`a`) |
+| Action                     | How                                                 |
+| -------------------------- | --------------------------------------------------- |
+| Add track to playlist      | `a` on a track in Library view                      |
+| Remove track from playlist | `d` inside an open playlist                         |
+| Delete a playlist          | `d` on a playlist in the playlist list              |
+| Create a new playlist      | Choose "New playlist…" in the playlist picker (`a`) |
 
 ### Library Database and Background Scanner
 
-When you open a directory that contains a `sndtool.db` file, or confirm
-creation of one on first launch, sndtool opens the SQLite database and starts
-a background scanner. The scanner walks the directory tree, reads ID3 tags from
+When you open a directory that contains a `sndtool.db` file, or confirm creation
+of one on first launch, sndtool opens the SQLite database and starts a
+background scanner. The scanner walks the directory tree, reads ID3 tags from
 every audio file, and stores the metadata in the database.
 
-The database is created at `sndtool.db` inside the target directory. It
-contains two kinds of data:
+The database is created at `sndtool.db` inside the target directory. It contains
+two kinds of data:
 
 - **Tracks** — path, artist, album, title, year, genre, duration
 - **Playlists** — named ordered lists of tracks
@@ -237,8 +237,13 @@ go build -o sndtool .
 - [Lip Gloss](https://github.com/charmbracelet/lipgloss) — terminal styling
 - [id3v2](https://github.com/bogem/id3v2) — ID3 tag reading/writing
 - [mp3lib](https://github.com/dmulholl/mp3lib) — MP3 frame-level processing
-- [modernc.org/sqlite](https://pkg.go.dev/modernc.org/sqlite) — SQLite (pure Go, no cgo)
+- [modernc.org/sqlite](https://pkg.go.dev/modernc.org/sqlite) — SQLite (pure Go,
+  no cgo)
 - [mpv](https://mpv.io/) — audio playback (optional, required for `P` play)
+
+## Other projects
+
+- [cliamp](https://github.com/bjarneo/cliamp)
 
 ## 💬 Contributing
 
